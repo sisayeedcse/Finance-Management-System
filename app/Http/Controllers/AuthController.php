@@ -18,11 +18,18 @@ class AuthController extends Controller
                         ->where('status', 'active')
                         ->first();
 
-        if (!$member || !Hash::check($request->password, $member->password)) {
+        if (!$member || blank($member->password) || !Hash::check($request->password, $member->password)) {
             return response()->json(['error' => 'Invalid credentials'], 401);
         }
 
-        $token = $member->createToken('sipr-app')->plainTextToken;
+        try {
+            $token = $member->createToken('sipr-app')->plainTextToken;
+        } catch (\Throwable $exception) {
+            return response()->json([
+                'error' => 'Unable to create login token',
+            ], 500);
+        }
+
         ActivityService::log('login', "{$member->name} signed in", $member->id);
 
         return response()->json([
