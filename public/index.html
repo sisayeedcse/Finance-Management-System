@@ -2834,21 +2834,14 @@
                         (active ? " active" : "") +
                         "' data-nid='" +
                         n.id +
-                            onclick +
-                            "'>" +
-                            "<span style='font-size:18px;line-height:1'>" +
-                            item.ic +
-                            "</span>" +
-                            "<span>" +
-                            item.lb +
-                            "</span>" +
-                            (act
-                                ? "<div style='width:16px;height:2px;border-radius:99px;background:var(--grn);margin-top:1px'></div>"
-                                : "") +
-                            "</button>"
-                        );
-                    })
-                    .join("");
+                        "' onclick='goPage(this.dataset.nid);closeSidebar()'>" +
+                        "<span style='width:20px;text-align:center;font-size:15px'>" +
+                        n.ic +
+                        "</span><span>" +
+                        n.lb +
+                        "</span></div>";
+                });
+                ni.innerHTML = html;
             }
 
             function setLabels() {
