@@ -390,50 +390,14 @@
                 }
                 #main {
                     margin-left: 0;
-                    padding: 13px 13px 80px;
+                    padding: 13px;
                 }
                 #ham {
                     display: block;
                 }
-                #bot-nav {
-                    display: flex !important;
-                }
                 .hide-mob {
                     display: none !important;
                 }
-            }
-            #bot-nav {
-                display: none;
-                position: fixed;
-                bottom: 0;
-                left: 0;
-                right: 0;
-                background: var(--sur);
-                border-top: 1px solid var(--bor);
-                z-index: 100;
-                padding: 5px 0 7px;
-            }
-            .bn {
-                flex: 1;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                gap: 2px;
-                padding: 5px 3px;
-                cursor: pointer;
-                color: var(--mut);
-                font-size: 9px;
-                font-weight: 700;
-                border: none;
-                background: none;
-                font-family: inherit;
-                touch-action: manipulation;
-            }
-            .bn.active {
-                color: var(--grn);
-            }
-            .bn .bi {
-                font-size: 18px;
             }
             #overlay {
                 display: none;
@@ -823,11 +787,6 @@
                 border-bottom-color: #d0d5f5;
                 backdrop-filter: blur(14px);
             }
-            body.light #bot-nav {
-                background: #fff;
-                border-top: 1px solid #d0d5f5;
-                box-shadow: 0 -4px 20px rgba(26, 82, 216, 0.05);
-            }
             body.light #overlay {
                 background: rgba(0, 0, 0, 0.28);
             }
@@ -935,12 +894,6 @@
             }
             body.light .si {
                 color: #4a52a0;
-            }
-            body.light .bn {
-                color: #4a52a0;
-            }
-            body.light .bn.active {
-                color: #1a52d8;
             }
             body.light #toast {
                 background: #080d30;
@@ -1613,7 +1566,6 @@
                 <div id="content"></div>
                 <div id="modal"></div>
             </div>
-            <div id="bot-nav"></div>
         </div>
         <div id="toast"></div>
 
@@ -2862,9 +2814,8 @@
                 }
             }
             function buildNav() {
-                var ni = $("nav-items"),
-                    bn = $("bot-nav");
-                if (!ni || !bn) return;
+                var ni = $("nav-items");
+                if (!ni) return;
                 var vis = NAVS.filter(function (n) {
                     return !n.adm || isAdmin();
                 });
@@ -2883,52 +2834,6 @@
                         (active ? " active" : "") +
                         "' data-nid='" +
                         n.id +
-                        "' onclick='goPage(this.dataset.nid);closeSidebar()'>";
-                    html +=
-                        "<span style='width:20px;text-align:center;font-size:15px'>" +
-                        n.ic +
-                        "</span><span>" +
-                        n.lb +
-                        "</span>";
-                    html += "</div>";
-                });
-                ni.innerHTML = html;
-                var secPages = [
-                    "finance",
-                    "wallet",
-                    "noticeboard",
-                    "expenses",
-                    "documents",
-                    "activity",
-                    "goals",
-                    "about",
-                    "control",
-                    "payments",
-                    "transactions",
-                ];
-                var isSecondary =
-                    secPages.indexOf(S.tab) >= 0 || !!S.activeProj;
-                bn.style.display = isSecondary ? "none" : "flex";
-                if (isSecondary) return;
-                var bnItems = [
-                    { id: "dashboard", ic: "⬡", lb: "Dashboard" },
-                    { id: "investments", ic: "📈", lb: "Projects" },
-                    { id: "members", ic: "○", lb: "Members" },
-                    { id: "_menu", ic: "≡", lb: "Menu" },
-                ];
-                bn.innerHTML = bnItems
-                    .map(function (item) {
-                        var act = S.tab === item.id;
-                        var onclick =
-                            item.id === "_menu"
-                                ? "toggleSidebar()"
-                                : "goPage(this.dataset.bid)";
-                        return (
-                            "<button class='bn" +
-                            (act ? " active" : "") +
-                            "' data-bid='" +
-                            item.id +
-                            "' onclick='" +
                             onclick +
                             "'>" +
                             "<span style='font-size:18px;line-height:1'>" +
