@@ -2833,8 +2833,13 @@
             }
 
             function initApp() {
+                var login = $("pg-login");
+                var invite = $("pg-invite");
+                var app = $("pg-app");
+                if (login) login.style.display = "none";
+                if (invite) invite.style.display = "none";
+                if (app) app.style.display = "block";
                 doneLoading();
-                $("pg-app").style.display = "block";
                 buildNav();
                 setLabels();
                 loadTxs();
