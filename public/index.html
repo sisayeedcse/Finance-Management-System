@@ -2250,7 +2250,12 @@
 
                 const res = await API.login(em, pw);
                 if (!res || res.error) {
-                    showErr("lerr", res?.message || "Login failed. Try again.");
+                    showErr(
+                        "lerr",
+                        res?.message ||
+                            res?.error ||
+                            "Login failed. Try again.",
+                    );
                     return;
                 }
 

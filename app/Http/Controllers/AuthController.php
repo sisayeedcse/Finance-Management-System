@@ -19,7 +19,10 @@ class AuthController extends Controller
                 ->first();
 
             if (!$member || blank($member->password) || !Hash::check($request->password, $member->password)) {
-                return response()->json(['error' => 'Invalid credentials'], 401);
+                return response()->json([
+                    'message' => 'Invalid credentials',
+                    'error' => 'Invalid credentials',
+                ], 401);
             }
 
             $token = $member->createToken('sipr-app')->plainTextToken;
