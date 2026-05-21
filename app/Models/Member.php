@@ -26,6 +26,7 @@ class Member extends AuthUser
     protected $casts = [
         'locked' => 'boolean',
         'monthly_due' => 'decimal:2',
+        'password' => 'hashed',
     ];
 
     public function transactions()

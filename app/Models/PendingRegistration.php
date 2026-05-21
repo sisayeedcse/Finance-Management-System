@@ -10,6 +10,19 @@ class PendingRegistration extends Model
     use HasFactory;
 
     protected $fillable = [
-        'name', 'email', 'phone', 'member_id', 'status'
+        'name',
+        'email',
+        'phone',
+        'invite_code',
+        'password',
+        'member_id',
+        'approved_role',
+        'approved_by',
+        'approved_at',
+        'status',
+    ];
+
+    protected $casts = [
+        'approved_at' => 'datetime',
     ];
 }

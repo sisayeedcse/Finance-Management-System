@@ -3,11 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Member;
+use App\Models\PendingRegistration;
 use App\Services\ActivityService;
 use App\Http\Requests\LoginRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Http;
 
 class AuthController extends Controller
 {
@@ -74,14 +74,18 @@ class AuthController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:100',
-            'email' => 'required|email|unique:members,email',
+            'email' => 'required|email|unique:members,email|unique:pending_registrations,email',
             'phone' => 'nullable|string',
+            'invite_code' => 'required|string|max:50',
+            'password' => 'required|string|min:6',
         ]);
 
-        \App\Models\PendingRegistration::create([
+        PendingRegistration::create([
             'name' => $request->name,
             'email' => $request->email,
             'phone' => $request->phone,
+            'invite_code' => $request->invite_code,
+            'password' => Hash::make($request->password),
             'status' => 'pending',
         ]);
 
@@ -90,90 +94,18 @@ class AuthController extends Controller
 
     public function redirectToGoogle()
     {
-        return \Socialite::driver('google')->redirect();
+        return redirect('/?error=google_signin_disabled');
     }
 
     public function handleGoogleCallback()
     {
-        try {
-            $googleUser = \Socialite::driver('google')->user();
-        } catch (\Exception $e) {
-            return redirect('/?error=google_auth_failed');
-        }
-
-        $member = Member::where('google_email', $googleUser->email)
-                        ->orWhere('google_uid', $googleUser->id)
-                        ->where('status', 'active')
-                        ->first();
-
-        if (!$member) {
-            return redirect('/?error=not_a_member');
-        }
-
-        $member->update(['google_uid' => $googleUser->id]);
-        $token = $member->createToken('sipr-google')->plainTextToken;
-        ActivityService::log('google_login', "{$member->name} signed in via Google", $member->id);
-
-        return redirect('/#google-token=' . $token . '&member=' . urlencode(json_encode([
-            'id' => $member->id,
-            'name' => $member->name,
-            'email' => $member->email,
-            'role' => $member->role,
-        ])));
+        return redirect('/?error=google_signin_disabled');
     }
 
     public function googleLogin(Request $request)
     {
-        $request->validate(['id_token' => 'required|string']);
-
-        // Verify id_token with Google tokeninfo endpoint
-        $idToken = $request->get('id_token');
-        try {
-            $resp = Http::get('https://oauth2.googleapis.com/tokeninfo', ['id_token' => $idToken]);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Unable to verify token with Google'], 500);
-        }
-
-        if ($resp->failed()) {
-            return response()->json(['error' => 'Invalid Google token'], 400);
-        }
-
-        $payload = $resp->json();
-        // Validate audience (client id)
-        $aud = $payload['aud'] ?? null;
-        $expectedAud = config('services.google.client_id') ?: env('GOOGLE_CLIENT_ID');
-        if ($expectedAud && $aud !== $expectedAud) {
-            return response()->json(['error' => 'Invalid Google token audience'], 400);
-        }
-        $email = $payload['email'] ?? null;
-        $googleUid = $payload['sub'] ?? null;
-
-        if (!$email || !$googleUid) {
-            return response()->json(['error' => 'Invalid token data'], 400);
-        }
-
-        $member = Member::where('email', $email)
-                        ->orWhere('google_uid', $googleUid)
-                        ->where('status', 'active')
-                        ->first();
-
-        if (!$member) {
-            return response()->json(['error' => 'Member not found or inactive'], 401);
-        }
-
-        $member->update(['google_uid' => $googleUid]);
-        $token = $member->createToken('sipr-google')->plainTextToken;
-
-        ActivityService::log('google_login', "{$member->name} signed in via Google", $member->id);
-
         return response()->json([
-            'token' => $token,
-            'member' => [
-                'id' => $member->id,
-                'name' => $member->name,
-                'email' => $member->email,
-                'role' => $member->role,
-            ]
-        ]);
+            'error' => 'Google sign-in is disabled for this installation.'
+        ], 410);
     }
 }

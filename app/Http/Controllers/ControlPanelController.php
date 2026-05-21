@@ -8,6 +8,7 @@ use App\Services\MemberIdService;
 use App\Services\ActivityService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class ControlPanelController extends Controller
 {
@@ -33,21 +34,50 @@ class ControlPanelController extends Controller
     {
         $registration = PendingRegistration::findOrFail($id);
 
+        if ($registration->status !== 'pending') {
+            return response()->json(['error' => 'Registration is no longer pending'], 422);
+        }
+
+        $request->validate([
+            'role' => 'required|in:admin,finance,secretary,member',
+        ]);
+
+        if (Member::where('email', $registration->email)->exists()) {
+            return response()->json(['error' => 'A member with this email already exists'], 409);
+        }
+
         $memberId = MemberIdService::generate($registration->name);
+        $passwordHash = $registration->password;
+        $temporaryPassword = null;
+
+        if (!$passwordHash) {
+            $temporaryPassword = Str::random(16);
+            $passwordHash = Hash::make($temporaryPassword);
+        }
+
         Member::create([
             'id' => $memberId,
             'name' => $registration->name,
             'email' => $registration->email,
             'phone' => $registration->phone,
-            'password' => Hash::make('password'),
+            'password' => $passwordHash,
             'status' => 'active',
-            'role' => 'member',
+            'role' => $request->role,
         ]);
 
-        $registration->update(['status' => 'approved', 'member_id' => $memberId]);
+        $registration->update([
+            'status' => 'approved',
+            'member_id' => $memberId,
+            'approved_role' => $request->role,
+            'approved_by' => $request->user()->id,
+            'approved_at' => now(),
+        ]);
         ActivityService::log('approve_registration', "Approved {$registration->name}", $request->user()->id);
 
-        return response()->json(['message' => 'Approved']);
+        return response()->json([
+            'message' => 'Approved',
+            'temporary_password' => $temporaryPassword,
+        ]);
     }
 
     public function reject(string $id, Request $request)

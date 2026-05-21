@@ -8,6 +8,7 @@ use App\Services\MemberIdService;
 use App\Http\Requests\UpdateMemberRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class MemberController extends Controller
 {
@@ -27,7 +28,7 @@ class MemberController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:100',
-            'email' => 'required|email|unique:members,email',
+            'email' => 'required|email|unique:members,email|unique:pending_registrations,email',
             'phone' => 'nullable|string|max:30',
             'title' => 'nullable|string|max:100',
             'role' => 'in:admin,finance,secretary,member',
@@ -35,6 +36,7 @@ class MemberController extends Controller
         ]);
 
         $memberId = MemberIdService::generate($request->name);
+        $temporaryPassword = $request->input('password') ?: Str::random(16);
 
         $member = Member::create([
             'id' => $memberId,
@@ -44,13 +46,16 @@ class MemberController extends Controller
             'title' => $request->title,
             'role' => $request->role ?? 'member',
             'monthly_due' => $request->monthly_due ?? 500,
-            'password' => Hash::make('password'),
+            'password' => Hash::make($temporaryPassword),
             'status' => 'active',
         ]);
 
         ActivityService::log('add_member', "Added member {$member->name} ({$member->id})", $request->user()->id);
 
-        return response()->json($member, 201);
+        return response()->json([
+            'data' => $member,
+            'temporary_password' => $temporaryPassword,
+        ], 201);
     }
 
     public function update(string $id, UpdateMemberRequest $request)
@@ -69,16 +74,33 @@ class MemberController extends Controller
 
     public function reset(Request $request)
     {
+        $credentials = [];
+
         Member::where('status', 'active')->update([
-            'password' => Hash::make('password'),
             'phone' => null,
             'google_uid' => null,
             'google_email' => null,
             'photo' => null,
         ]);
 
+        Member::where('status', 'active')->get()->each(function (Member $member) use (&$credentials) {
+            $temporaryPassword = Str::random(16);
+            $member->update([
+                'password' => Hash::make($temporaryPassword),
+            ]);
+
+            $credentials[] = [
+                'id' => $member->id,
+                'email' => $member->email,
+                'temporary_password' => $temporaryPassword,
+            ];
+        });
+
         ActivityService::log('reset_members', "Reset all member profiles", $request->user()->id);
-        return response()->json(['message' => 'Members reset']);
+        return response()->json([
+            'message' => 'Members reset',
+            'temporary_passwords' => $credentials,
+        ]);
     }
 
     public function unlinkGoogle(string $id, Request $request)
