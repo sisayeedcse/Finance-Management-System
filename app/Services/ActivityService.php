@@ -19,11 +19,7 @@ class ActivityService
                 'created_at' => now(),
             ]);
         } catch (\Throwable $exception) {
-            logger()->warning('Activity log write failed.', [
-                'action' => $action,
-                'member_id' => $memberId,
-                'error' => $exception->getMessage(),
-            ]);
+            // Intentionally ignore logging failures so authentication can still complete.
         }
     }
 }
