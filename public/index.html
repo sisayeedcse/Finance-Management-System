@@ -1541,6 +1541,7 @@
                 getMember: (id) => apiCall(`/members/${id}`),
                 updateMember: (id, data) =>
                     apiCall(`/members/${id}`, "PUT", data),
+                resetMembers: () => apiCall("/members/reset", "POST", {}),
                 linkMemberGoogle: (id, data) =>
                     apiCall(`/members/${id}/link-google`, "POST", data),
 
@@ -5637,20 +5638,21 @@
                 }
                 var expenses = (inv.projectExpenses || []).slice();
                 expenses.push(entry);
-                db.collection("investments")
-                    .doc(invId)
-                    .update({ projectExpenses: expenses })
-                    .then(function () {
+                (async () => {
+                    try {
+                        await API.updateProject(invId, {
+                            projectExpenses: expenses,
+                        });
                         closeModal();
                         toast("&#x2713; Expense recorded!");
-                    })
-                    .catch(function (e) {
-                        toast(e.message, false);
+                    } catch (e) {
+                        toast(e.message || "Error saving expense", false);
                         if (btn) {
                             btn.disabled = false;
                             btn.textContent = "Save Expense";
                         }
-                    });
+                    }
+                })();
             }
             function delProjectExpense(invId, idx) {
                 if (!confirm("Delete this expense?")) return;
@@ -5660,15 +5662,16 @@
                 if (!inv) return;
                 var expenses = (inv.projectExpenses || []).slice();
                 expenses.splice(idx, 1);
-                db.collection("investments")
-                    .doc(invId)
-                    .update({ projectExpenses: expenses })
-                    .then(function () {
+                (async () => {
+                    try {
+                        await API.updateProject(invId, {
+                            projectExpenses: expenses,
+                        });
                         toast("Deleted.");
-                    })
-                    .catch(function (e) {
-                        toast(e.message, false);
-                    });
+                    } catch (e) {
+                        toast(e.message || "Error deleting expense", false);
+                    }
+                })();
             }
 
             function openSale(invId) {
@@ -5900,25 +5903,24 @@
                 var sales = (inv.sales || []).slice();
                 sales.push(saleEntry);
                 var newReturn = Number(inv.actualReturn || 0) + revenue;
-                db.collection("investments")
-                    .doc(invId)
-                    .update({
-                        collections: cols2,
-                        sales: sales,
-                        actualReturn: newReturn,
-                    })
-                    .then(function () {
+                (async () => {
+                    try {
+                        await API.updateProject(invId, {
+                            collections: cols2,
+                            sales: sales,
+                            actualReturn: newReturn,
+                        });
                         closeModal();
                         logAct("record_sale", fmt(revenue) + " — " + inv.name);
                         toast("&#x2713; Sale recorded!");
-                    })
-                    .catch(function (e) {
-                        toast(e.message, false);
+                    } catch (e) {
+                        toast(e.message || "Error recording sale", false);
                         if (btn) {
                             btn.disabled = false;
                             btn.textContent = "&#x1F4B5; Record Sale";
                         }
-                    });
+                    }
+                })();
             }
 
             function addCapital(invId) {
@@ -5971,20 +5973,19 @@
                 var totalCap = entries.reduce(function (s, e) {
                     return s + Number(e.amount || 0);
                 }, 0);
-                db.collection("investments")
-                    .doc(invId)
-                    .update({
-                        capitalEntries: entries,
-                        capitalDeployed: totalCap,
-                        amount: totalCap,
-                    })
-                    .then(function () {
+                (async () => {
+                    try {
+                        await API.updateProject(invId, {
+                            capitalEntries: entries,
+                            capitalDeployed: totalCap,
+                            amount: totalCap,
+                        });
                         closeModal();
                         toast("Capital added: " + fmt(amt));
-                    })
-                    .catch(function (e) {
-                        toast(e.message, false);
-                    });
+                    } catch (e) {
+                        toast(e.message || "Error adding capital", false);
+                    }
+                })();
             }
             // Open/Save investment
             function openInv(id) {
@@ -6228,19 +6229,18 @@
                 if (!inv) return;
                 var ms = (inv.milestones || []).slice();
                 ms[idx].done = !ms[idx].done;
-                db.collection("investments")
-                    .doc(invId)
-                    .update({ milestones: ms })
-                    .then(function () {
+                (async () => {
+                    try {
+                        await API.updateProject(invId, { milestones: ms });
                         toast(
                             ms[idx].done
                                 ? "Marked complete!"
                                 : "Marked incomplete",
                         );
-                    })
-                    .catch(function (e) {
-                        toast(e.message, false);
-                    });
+                    } catch (e) {
+                        toast(e.message || "Error updating milestone", false);
+                    }
+                })();
             }
             function delInv(id) {
                 if (
@@ -7253,24 +7253,24 @@
                     toast("Member not found", false);
                     return;
                 }
-                db.collection("transactions")
-                    .add({
-                        type: "fine",
-                        member: mem.name,
-                        memberUID: mem.id,
-                        memberEmail: mem.email,
-                        amount: amt,
-                        date: d,
-                        note: r,
-                    })
-                    .then(function () {
+                (async () => {
+                    try {
+                        await API.createTransaction({
+                            type: "fine",
+                            member: mem.name,
+                            memberUID: mem.id,
+                            memberEmail: mem.email,
+                            amount: amt,
+                            date: d,
+                            note: r,
+                        });
                         closeModal();
                         logAct("issue_fine", mname + " — " + fmt(amt));
                         toast("Fine issued to " + mname);
-                    })
-                    .catch(function (e) {
-                        toast(e.message, false);
-                    });
+                    } catch (e) {
+                        toast(e.message || "Error issuing fine", false);
+                    }
+                })();
             }
 
             // ═══════════ GOALS ═══════════
@@ -7896,16 +7896,10 @@
             function loadActivity() {
                 var con = $("content");
                 if (!con) return;
-                var q = db
-                    .collection("activityLog")
-                    .orderBy("ts", "desc")
-                    .limit(80);
-                q.get()
-                    .then(function (snap) {
-                        var logs = [];
-                        snap.forEach(function (d) {
-                            logs.push({ id: d.id, ...d.data() });
-                        });
+                (async () => {
+                    try {
+                        const res = await API.getActivityLog();
+                        const logs = (res && res.data) || res || [];
                         var TYPE_ICON = {
                             add_payment: "💳",
                             add_collection: "📦",
@@ -7943,18 +7937,29 @@
                         logs.forEach(function (log, i) {
                             var icon = TYPE_ICON[log.type] || "•";
                             var col = TYPE_COL[log.type] || "var(--mut)";
-                            var ts = log.ts
-                                ? new Date(
-                                      log.ts.seconds
-                                          ? log.ts.seconds * 1000
-                                          : log.ts,
-                                  ).toLocaleString("en-GB", {
-                                      day: "2-digit",
-                                      month: "short",
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                  })
-                                : "";
+                            var ts =
+                                log.created_at ||
+                                log.ts ||
+                                log.addedAt ||
+                                log.ts;
+                            if (ts && typeof ts === "string") {
+                                ts = new Date(ts).toLocaleString("en-GB", {
+                                    day: "2-digit",
+                                    month: "short",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                });
+                            } else if (ts && ts.seconds) {
+                                ts = new Date(ts.seconds * 1000).toLocaleString(
+                                    "en-GB",
+                                    {
+                                        day: "2-digit",
+                                        month: "short",
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                    },
+                                );
+                            } else ts = "";
                             h +=
                                 "<div style='display:flex;gap:10px;padding:11px 14px;border-bottom:" +
                                 (i < logs.length - 1
@@ -7972,13 +7977,19 @@
                                 "<div style='font-size:12px;font-weight:700'><span style='color:" +
                                 col +
                                 "'>" +
-                                (log.user || log.addedBy || "System") +
+                                (log.user ||
+                                    log.addedBy ||
+                                    log.member ||
+                                    "System") +
                                 "</span> · " +
                                 (log.action || log.type || "action") +
                                 "</div>";
                             h +=
                                 "<div style='font-size:10px;color:var(--mut);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'>" +
-                                (log.detail || log.data || "") +
+                                (log.detail ||
+                                    log.description ||
+                                    log.data ||
+                                    "") +
                                 "</div>";
                             h +=
                                 "<div style='font-size:9px;color:var(--mut);margin-top:1px'>" +
@@ -7990,9 +8001,7 @@
                         var container = con.querySelector(".fc");
                         if (container)
                             container.insertAdjacentHTML("beforeend", h);
-                    })
-                    .catch(function () {
-                        // Show recent tx as fallback
+                    } catch (e) {
                         var h =
                             "<div style='background:var(--sur);border:1px solid var(--bor);border-radius:14px;overflow:hidden'>";
                         var recent = S.txs.slice(0, 20);
@@ -8036,7 +8045,8 @@
                         var container = con.querySelector(".fc");
                         if (container)
                             container.insertAdjacentHTML("beforeend", h);
-                    });
+                    }
+                })();
             }
             function expAuditCSV() {
                 var rows = [["Date", "User", "Action", "Detail"]];
@@ -8533,22 +8543,17 @@
                     )
                 )
                     return;
-                var batch = db.batch();
-                DEF_MEMS.forEach(function (m) {
-                    batch.set(db.collection("members").doc(m.id), m);
-                });
-                batch
-                    .commit()
-                    .then(function () {
-                        loadMembers(function () {
-                            render();
-                            toast("Members reset!");
-                        });
+                (async () => {
+                    try {
+                        await API.resetMembers();
+                        await loadMembers();
+                        render();
+                        toast("Members reset!");
                         logAct("reset_members", "All reset");
-                    })
-                    .catch(function (e) {
-                        toast(e.message, false);
-                    });
+                    } catch (e) {
+                        toast(e.message || "Error resetting members", false);
+                    }
+                })();
             }
 
             // Close profile on outside click

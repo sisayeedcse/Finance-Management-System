@@ -11,4 +11,21 @@ class ActivityLogController extends Controller
     {
         return response()->json(['data' => ActivityLog::orderByDesc('created_at')->limit(100)->get()]);
     }
+
+    public function store(Request $request)
+    {
+        $request->validate([
+            'action' => 'required|string|max:100',
+            'description' => 'nullable|string',
+        ]);
+
+        $log = ActivityLog::create([
+            'action' => $request->action,
+            'description' => $request->description ?? null,
+            'member_id' => $request->user() ? $request->user()->id : null,
+            'created_at' => now(),
+        ]);
+
+        return response()->json($log, 201);
+    }
 }

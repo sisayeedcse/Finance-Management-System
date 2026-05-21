@@ -26,8 +26,9 @@ class TransactionController extends Controller
 
     public function store(StoreTransactionRequest $request)
     {
+        $memberId = $request->member_id ?? $request->get('memberUID') ?? null;
         $transaction = Transaction::create([
-            'member_id' => $request->member_id,
+            'member_id' => $memberId,
             'type' => $request->type,
             'amount' => $request->amount,
             'note' => $request->note,

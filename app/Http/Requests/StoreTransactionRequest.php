@@ -14,7 +14,7 @@ class StoreTransactionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'member_id' => 'required|exists:members,id',
+            'member_id' => 'sometimes|nullable|exists:members,id',
             'type' => 'required|in:deposit,profit,invest,expense,fine',
             'amount' => 'required|numeric|min:0',
             'date' => 'required|date',

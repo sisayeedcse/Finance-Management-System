@@ -18,7 +18,7 @@ class Member extends AuthUser
     protected $fillable = [
         'id', 'name', 'email', 'phone', 'title', 'role',
         'locked', 'status', 'google_uid', 'google_email',
-        'monthly_due', 'password',
+        'monthly_due', 'password', 'photo',
     ];
 
     protected $hidden = ['password', 'remember_token'];

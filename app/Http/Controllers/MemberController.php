@@ -61,7 +61,7 @@ class MemberController extends Controller
             return response()->json(['error' => 'Title is locked for this member'], 422);
         }
 
-        $member->update($request->only(['name', 'email', 'phone', 'title', 'role', 'monthly_due']));
+        $member->update($request->only(['name', 'email', 'phone', 'title', 'role', 'monthly_due', 'photo']));
         ActivityService::log('save_member', "Updated member {$member->name}", $request->user()->id);
 
         return response()->json($member);
@@ -71,9 +71,13 @@ class MemberController extends Controller
     {
         Member::where('status', 'active')->update([
             'password' => Hash::make('password'),
+            'phone' => null,
+            'google_uid' => null,
+            'google_email' => null,
+            'photo' => null,
         ]);
 
-        ActivityService::log('reset_members', "Reset all member passwords", $request->user()->id);
+        ActivityService::log('reset_members', "Reset all member profiles", $request->user()->id);
         return response()->json(['message' => 'Members reset']);
     }
 

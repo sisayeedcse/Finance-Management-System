@@ -73,6 +73,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Activity Log
     Route::get('/activity-log', [ActivityLogController::class, 'index']);
+    Route::post('/activity-log', [ActivityLogController::class, 'store']);
 
     // About
     Route::get('/about', [MemberController::class, 'about']);
@@ -121,6 +122,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/projects/{id}', [ProjectController::class, 'update']);
         Route::delete('/projects/{id}', [ProjectController::class, 'destroy']);
         Route::post('/projects/{id}/collections', [CollectionController::class, 'store']);
+        // Generic collections endpoint (accepts project_id in payload)
+        Route::post('/collections', [CollectionController::class, 'storeGeneric']);
         Route::post('/projects/{id}/milestones', [ProjectController::class, 'storeMilestone']);
         Route::put('/milestones/{id}', [ProjectController::class, 'updateMilestone']);
         // Proposals admin actions

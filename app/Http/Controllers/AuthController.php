@@ -7,6 +7,7 @@ use App\Services\ActivityService;
 use App\Http\Requests\LoginRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 
 class AuthController extends Controller
 {
@@ -125,10 +126,27 @@ class AuthController extends Controller
     {
         $request->validate(['id_token' => 'required|string']);
 
-        // Extract email and google_uid from request
-        // In production, verify the token with Google API
-        $email = $request->get('email');
-        $googleUid = $request->get('google_uid');
+        // Verify id_token with Google tokeninfo endpoint
+        $idToken = $request->get('id_token');
+        try {
+            $resp = Http::get('https://oauth2.googleapis.com/tokeninfo', ['id_token' => $idToken]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Unable to verify token with Google'], 500);
+        }
+
+        if ($resp->failed()) {
+            return response()->json(['error' => 'Invalid Google token'], 400);
+        }
+
+        $payload = $resp->json();
+        // Validate audience (client id)
+        $aud = $payload['aud'] ?? null;
+        $expectedAud = config('services.google.client_id') ?: env('GOOGLE_CLIENT_ID');
+        if ($expectedAud && $aud !== $expectedAud) {
+            return response()->json(['error' => 'Invalid Google token audience'], 400);
+        }
+        $email = $payload['email'] ?? null;
+        $googleUid = $payload['sub'] ?? null;
 
         if (!$email || !$googleUid) {
             return response()->json(['error' => 'Invalid token data'], 400);

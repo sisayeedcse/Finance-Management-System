@@ -14,12 +14,13 @@ class UpdateMemberRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => 'required|string|max:100',
-            'email' => 'required|email',
-            'phone' => 'nullable|string|max:30',
-            'title' => 'nullable|string|max:100',
-            'role' => 'required|in:admin,finance,secretary,member',
-            'monthly_due' => 'required|numeric|min:0',
+            'name' => 'sometimes|required|string|max:100',
+            'email' => 'sometimes|required|email',
+            'phone' => 'sometimes|nullable|string|max:30',
+            'title' => 'sometimes|nullable|string|max:100',
+            'role' => 'sometimes|required|in:admin,finance,secretary,member',
+            'monthly_due' => 'sometimes|required|numeric|min:0',
+            'photo' => 'sometimes|nullable|string',
         ];
     }
 }
