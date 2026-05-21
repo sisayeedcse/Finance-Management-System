@@ -13,20 +13,20 @@ class AuthController extends Controller
 {
     public function login(LoginRequest $request)
     {
-
-        $member = Member::where('email', $request->email)
-                        ->where('status', 'active')
-                        ->first();
-
-        if (!$member || blank($member->password) || !Hash::check($request->password, $member->password)) {
-            return response()->json(['error' => 'Invalid credentials'], 401);
-        }
-
         try {
+            $member = Member::where('email', $request->email)
+                ->where('status', 'active')
+                ->first();
+
+            if (!$member || blank($member->password) || !Hash::check($request->password, $member->password)) {
+                return response()->json(['error' => 'Invalid credentials'], 401);
+            }
+
             $token = $member->createToken('sipr-app')->plainTextToken;
         } catch (\Throwable $exception) {
+            report($exception);
             return response()->json([
-                'error' => 'Unable to create login token',
+                'message' => 'Login failed on the server. Please check the server logs.',
             ], 500);
         }
 
