@@ -9,13 +9,21 @@ class ActivityService
 {
     public static function log(string $action, string $description, string $memberId): void
     {
-        $member = \App\Models\Member::find($memberId);
-        ActivityLog::create([
-            'action' => $action,
-            'description' => $description,
-            'performed_by' => $memberId,
-            'performed_by_name' => $member?->name ?? 'Unknown',
-            'created_at' => now(),
-        ]);
+        try {
+            $member = \App\Models\Member::find($memberId);
+            ActivityLog::create([
+                'action' => $action,
+                'description' => $description,
+                'performed_by' => $memberId,
+                'performed_by_name' => $member?->name ?? 'Unknown',
+                'created_at' => now(),
+            ]);
+        } catch (\Throwable $exception) {
+            logger()->warning('Activity log write failed.', [
+                'action' => $action,
+                'member_id' => $memberId,
+                'error' => $exception->getMessage(),
+            ]);
+        }
     }
 }
