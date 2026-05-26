@@ -107,6 +107,9 @@ class AuthFlowTest extends TestCase
     {
         $response = $this->get('/auth/google/redirect');
 
-        $response->assertRedirect('/?error=google_signin_disabled');
+        // With Socialite enabled we expect a redirect to Google's OAuth endpoint (302)
+        $response->assertStatus(302);
+        $location = $response->headers->get('Location');
+        $this->assertStringContainsString('accounts.google.com', (string) $location);
     }
 }
