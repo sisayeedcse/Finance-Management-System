@@ -145,4 +145,28 @@ class AuthFlowTest extends TestCase
             'google_email' => 'member@example.com',
         ]);
     }
+
+    public function test_unknown_google_sign_in_is_rejected_without_creating_a_member(): void
+    {
+        Http::fake([
+            'https://oauth2.googleapis.com/tokeninfo*' => Http::response([
+                'email' => 'new.person@example.com',
+                'sub' => 'google-sub-999',
+                'name' => 'New Person',
+            ], 200),
+        ]);
+
+        $response = $this->postJson('/api/auth/google', [
+            'id_token' => 'fake-token',
+        ]);
+
+        $response->assertStatus(403)
+            ->assertJson([
+                'error' => 'Google account is not linked to an approved member',
+            ]);
+
+        $this->assertDatabaseMissing('members', [
+            'email' => 'new.person@example.com',
+        ]);
+    }
 }

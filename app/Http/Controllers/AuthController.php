@@ -129,6 +129,10 @@ class AuthController extends Controller
             'photo' => $googleUser->getAvatar(),
         ]);
 
+        if (!$member) {
+            return redirect('/?error=google_account_not_linked');
+        }
+
         $token = $member->createToken('sipr-google')->plainTextToken;
 
         $memberData = json_encode([
@@ -180,6 +184,13 @@ class AuthController extends Controller
             'name' => $data['name'] ?? $data['given_name'] ?? $email,
             'photo' => $data['picture'] ?? null,
         ]);
+
+        if (!$member) {
+            return response()->json([
+                'error' => 'Google account is not linked to an approved member',
+            ], 403);
+        }
+
         $token = $member->createToken('sipr-google')->plainTextToken;
         ActivityService::log('google_login', "{$member->name} signed in via Google", $member->id);
 
@@ -194,7 +205,7 @@ class AuthController extends Controller
         ]);
     }
 
-    private function resolveGoogleMember(array $profile): Member
+    private function resolveGoogleMember(array $profile): ?Member
     {
         $email = $profile['email'] ?? null;
         $googleUid = $profile['google_uid'] ?? null;
@@ -224,23 +235,7 @@ class AuthController extends Controller
             return $member;
         }
 
-        $member = Member::create([
-            'id' => $this->generateMemberId(),
-            'name' => $profile['name'] ?? $email ?? 'Member',
-            'email' => $email ?? sprintf('%s@sipr.local', Str::lower(Str::random(12))),
-            'phone' => null,
-            'title' => 'Member',
-            'role' => 'member',
-            'locked' => false,
-            'status' => 'active',
-            'google_uid' => $googleUid,
-            'google_email' => $email,
-            'photo' => $profile['photo'] ?? null,
-            'monthly_due' => 500,
-            'password' => null,
-        ]);
-
-        return $member;
+        return null;
     }
 
     private function generateMemberId(): string
