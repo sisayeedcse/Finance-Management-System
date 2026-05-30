@@ -10,7 +10,31 @@ class Project extends Model
     use HasFactory;
 
     protected $fillable = [
-        'name', 'description', 'type', 'status', 'capital', 'returned', 'expected', 'team', 'started_at'
+        'name',
+        'description',
+        'type',
+        'status',
+        'capital',
+        'returned',
+        'expected',
+        'team',
+        'started_at',
+        'capitalSource',
+        'projectManagerId',
+        'projectManagerName',
+        'teamEntries',
+        'collections',
+        'sales',
+        'projectExpenses',
+        'capitalEntries',
+        'phases',
+        'amount',
+        'capitalDeployed',
+        'expectedReturn',
+        'actualReturn',
+        'sector',
+        'date',
+        'notes',
     ];
 
     protected $casts = [
@@ -18,7 +42,85 @@ class Project extends Model
         'returned' => 'decimal:2',
         'expected' => 'decimal:2',
         'started_at' => 'date',
+        'teamEntries' => 'array',
+        'collections' => 'array',
+        'sales' => 'array',
+        'projectExpenses' => 'array',
+        'capitalEntries' => 'array',
+        'phases' => 'array',
     ];
+
+    public function getAmountAttribute()
+    {
+        return $this->capital;
+    }
+
+    public function setAmountAttribute($value): void
+    {
+        $this->attributes['capital'] = $value;
+    }
+
+    public function getCapitalDeployedAttribute()
+    {
+        return $this->capital;
+    }
+
+    public function setCapitalDeployedAttribute($value): void
+    {
+        $this->attributes['capital'] = $value;
+    }
+
+    public function getExpectedReturnAttribute()
+    {
+        return $this->expected;
+    }
+
+    public function setExpectedReturnAttribute($value): void
+    {
+        $this->attributes['expected'] = $value;
+    }
+
+    public function getActualReturnAttribute()
+    {
+        return $this->returned;
+    }
+
+    public function setActualReturnAttribute($value): void
+    {
+        $this->attributes['returned'] = $value;
+    }
+
+    public function getSectorAttribute()
+    {
+        return $this->type;
+    }
+
+    public function setSectorAttribute($value): void
+    {
+        $this->attributes['type'] = $value;
+    }
+
+    public function getDateAttribute()
+    {
+        return !empty($this->attributes['started_at'])
+            ? substr((string) $this->attributes['started_at'], 0, 10)
+            : null;
+    }
+
+    public function setDateAttribute($value): void
+    {
+        $this->attributes['started_at'] = $value;
+    }
+
+    public function getNotesAttribute()
+    {
+        return $this->description;
+    }
+
+    public function setNotesAttribute($value): void
+    {
+        $this->attributes['description'] = $value;
+    }
 
     public function collections()
     {

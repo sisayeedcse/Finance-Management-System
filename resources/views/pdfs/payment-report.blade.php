@@ -62,8 +62,8 @@
                 <tr>
                     <td>{{ $m->name }}</td>
                     <td>{{ $p?->status ?? 'pending' }}</td>
-                    <td>৳{{ number_format($m->monthly_due, 0) }}</td>
-                    <td>৳{{ number_format($p?->amount ?? 0, 0) }}</td>
+                    <td>BDT {{ number_format($m->monthly_due, 0) }}</td>
+                    <td>BDT {{ number_format($p?->amount ?? 0, 0) }}</td>
                     <td>{{ $p?->paid_at ?? '–' }}</td>
                 </tr>
             @endforeach
@@ -71,8 +71,8 @@
     </table>
 
     <div class="summary">
-        <p><strong>Total Due:</strong> ৳{{ number_format($total_due, 0) }}</p>
-        <p><strong>Total Collected:</strong> ৳{{ number_format($collected, 0) }}</p>
+        <p><strong>Total Due:</strong> BDT {{ number_format($total_due, 0) }}</p>
+        <p><strong>Total Collected:</strong> BDT {{ number_format($collected, 0) }}</p>
     </div>
 </body>
 

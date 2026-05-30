@@ -19,6 +19,8 @@ class StoreTransactionRequest extends FormRequest
             'amount' => 'required|numeric|min:0',
             'date' => 'required|date',
             'note' => 'nullable|string',
+            'paymentForYear' => 'nullable|integer|min:2000',
+            'paymentForMonth' => 'nullable|integer|min:1|max:12',
         ];
     }
 }

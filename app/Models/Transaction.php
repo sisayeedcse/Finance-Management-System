@@ -10,7 +10,7 @@ class Transaction extends Model
     use HasFactory;
 
     protected $fillable = [
-        'member_id', 'type', 'amount', 'note', 'date', 'created_by'
+        'member_id', 'type', 'amount', 'note', 'date', 'created_by', 'paymentForYear', 'paymentForMonth'
     ];
 
     protected $casts = [

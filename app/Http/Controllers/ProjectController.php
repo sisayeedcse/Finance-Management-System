@@ -18,13 +18,39 @@ class ProjectController extends Controller
 
     public function show(string $id)
     {
-        $project = Project::with('collections', 'milestones')->findOrFail($id);
+        $project = Project::findOrFail($id);
         return response()->json($project);
     }
 
     public function store(StoreProjectRequest $request)
     {
-        $project = Project::create($request->only(['name', 'description', 'type', 'capital', 'started_at']));
+        $project = Project::create($request->only([
+            'name',
+            'description',
+            'type',
+            'status',
+            'capital',
+            'returned',
+            'expected',
+            'team',
+            'started_at',
+            'capitalSource',
+            'projectManagerId',
+            'projectManagerName',
+            'teamEntries',
+            'collections',
+            'sales',
+            'projectExpenses',
+            'capitalEntries',
+            'phases',
+            'amount',
+            'capitalDeployed',
+            'expectedReturn',
+            'actualReturn',
+            'sector',
+            'date',
+            'notes',
+        ]));
         ActivityService::log('create_project', "Created project: {$project->name}", $request->user()->id);
 
         return response()->json($project, 201);
@@ -33,7 +59,33 @@ class ProjectController extends Controller
     public function update(string $id, Request $request)
     {
         $project = Project::findOrFail($id);
-        $project->update($request->only(['name', 'description', 'type', 'status', 'capital', 'returned', 'expected', 'team']));
+        $project->update($request->only([
+            'name',
+            'description',
+            'type',
+            'status',
+            'capital',
+            'returned',
+            'expected',
+            'team',
+            'started_at',
+            'capitalSource',
+            'projectManagerId',
+            'projectManagerName',
+            'teamEntries',
+            'collections',
+            'sales',
+            'projectExpenses',
+            'capitalEntries',
+            'phases',
+            'amount',
+            'capitalDeployed',
+            'expectedReturn',
+            'actualReturn',
+            'sector',
+            'date',
+            'notes',
+        ]));
         ActivityService::log('update_project', "Updated project: {$project->name}", $request->user()->id);
         return response()->json($project);
     }

@@ -174,6 +174,48 @@
                 border-color: var(--grn);
                 box-shadow: 0 0 0 3px #5b8fff22;
             }
+            .pw-wrap {
+                position: relative;
+            }
+            .pw-toggle {
+                position: absolute;
+                right: 0;
+                top: 0;
+                bottom: 0;
+                width: 42px;
+                background: none;
+                border: none;
+                color: var(--mut);
+                cursor: pointer;
+                display: grid;
+                place-items: center;
+                transition:
+                    color 0.2s ease,
+                    transform 0.2s ease;
+            }
+            .pw-toggle:hover {
+                color: var(--grn);
+            }
+            .pw-toggle svg {
+                width: 18px;
+                height: 18px;
+                position: absolute;
+                transition:
+                    opacity 0.22s ease,
+                    transform 0.22s ease;
+            }
+            .pw-toggle .eye-open {
+                opacity: 0;
+                transform: scale(0.65) rotate(-18deg);
+            }
+            .pw-toggle.is-visible .eye-closed {
+                opacity: 0;
+                transform: scale(0.65) rotate(18deg);
+            }
+            .pw-toggle.is-visible .eye-open {
+                opacity: 1;
+                transform: scale(1) rotate(0);
+            }
             select.inp {
                 cursor: pointer;
             }
@@ -1141,7 +1183,7 @@
                     </div>
                     <div style="margin-bottom: 14px">
                         <label class="lbl">Password</label>
-                        <div style="position: relative">
+                        <div class="pw-wrap">
                             <input
                                 id="pw"
                                 type="password"
@@ -1151,27 +1193,42 @@
                                 autocomplete="current-password"
                             />
                             <button
-                                onclick="
-                                    var i = document.getElementById('pw');
-                                    i.type =
-                                        i.type == 'password'
-                                            ? 'text'
-                                            : 'password';
-                                "
-                                style="
-                                    position: absolute;
-                                    right: 0;
-                                    top: 0;
-                                    bottom: 0;
-                                    width: 42px;
-                                    background: none;
-                                    border: none;
-                                    color: var(--mut);
-                                    cursor: pointer;
-                                    font-size: 17px;
-                                "
+                                type="button"
+                                class="pw-toggle"
+                                aria-label="Toggle password visibility"
+                                onclick="togglePw(this, 'pw')"
                             >
-                                👁
+                                <svg
+                                    class="eye-closed"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="1.8"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    aria-hidden="true"
+                                >
+                                    <path
+                                        d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"
+                                    />
+                                    <circle cx="12" cy="12" r="3" />
+                                </svg>
+                                <svg
+                                    class="eye-open"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="1.8"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    aria-hidden="true"
+                                >
+                                    <path
+                                        d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"
+                                    />
+                                    <circle cx="12" cy="12" r="3" />
+                                    <path d="M4 4l16 16" />
+                                </svg>
                             </button>
                         </div>
                     </div>
@@ -1912,7 +1969,7 @@
 
             var NAVS = [
                 { id: "dashboard", ic: "⬡", lb: "Dashboard", grp: 1 },
-                { id: "finance", ic: "💳", lb: "💳 Monthly Payments", grp: 1 },
+                { id: "finance", ic: "＋", lb: "Finance", grp: 1 },
                 { id: "investments", ic: "📈", lb: "Projects", grp: 1 },
                 { id: "members", ic: "○", lb: "Members", grp: 1 },
                 { id: "noticeboard", ic: "🔔", lb: "Notice Board", grp: 2 },
@@ -1958,7 +2015,8 @@
             };
             var TITLES = {
                 dashboard: "Dashboard",
-                payments: "Monthly Payments",
+                payments: "Finance",
+                finance: "Finance",
                 investments: "Projects",
                 members: "Members",
                 activity: "Audit Trail",
@@ -1992,7 +2050,7 @@
                     abs = Math.round(Math.abs(v))
                         .toString()
                         .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-                return (neg ? "\u09F3-" : "\u09F3") + abs;
+                return (neg ? "-" : "") + "BDT " + abs;
             }
             function countUpBalance() {
                 var el = document.getElementById("dash-balance");
@@ -2237,6 +2295,15 @@
             function gLogin() {
                 // Redirect to Laravel Google OAuth endpoint
                 window.location.href = "/auth/google/redirect";
+            }
+
+            function togglePw(btn, inputId) {
+                var i = $(inputId);
+                if (!i) return;
+                var visible = i.type === "password";
+                i.type = visible ? "text" : "password";
+                if (btn && btn.classList)
+                    btn.classList.toggle("is-visible", visible);
             }
 
             async function eLogin() {
@@ -3402,6 +3469,24 @@
                         );
                         var ret = Number(inv.actualReturn || 0);
                         var pl = ret - dep;
+                        var cols = inv.collections || [];
+                        var sales = inv.sales || [];
+                        var expenses = inv.projectExpenses || [];
+                        var stockTotal = cols.reduce(function (s, e) {
+                            return s + Number(e.kg || 0);
+                        }, 0);
+                        var salesTotal = sales.reduce(function (s, e) {
+                            return s + Number(e.soldKg || 0);
+                        }, 0);
+                        var revenueTotal = (sales.length ? sales : cols).reduce(
+                            function (s, e) {
+                                return s + Number(e.revenue || 0);
+                            },
+                            0,
+                        );
+                        var expenseTotal = expenses.reduce(function (s, e) {
+                            return s + Number(e.amount || 0);
+                        }, 0);
                         var IST = {
                             active: { L: "Active", C: "var(--grn)" },
                             planning: { L: "Planning", C: "var(--amber)" },
@@ -3425,7 +3510,26 @@
                             st.L +
                             " · " +
                             fmt(dep) +
-                            " deployed</div></div>";
+                            " deployed</div>";
+                        h +=
+                            "<div style='font-size:10px;color:var(--mut);margin-top:5px;line-height:1.5'>" +
+                            "Manager: <span style='color:var(--grn);font-weight:700'>" +
+                            (inv.projectManagerName || "Unassigned") +
+                            "</span><br/>" +
+                            "Team: <span style='color:var(--purple);font-weight:700'>" +
+                            (inv.teamEntries || []).length +
+                            "</span><br/>" +
+                            "Daily Stock / Sales: <span style='color:var(--teal);font-weight:700'>" +
+                            stockTotal.toFixed(1) +
+                            " / " +
+                            salesTotal.toFixed(1) +
+                            "</span><br/>" +
+                            "Auto Revenue: <span style='color:var(--green);font-weight:700'>" +
+                            fmt(revenueTotal) +
+                            "</span><br/>" +
+                            "Expenses: <span style='color:var(--orange);font-weight:700'>" +
+                            fmt(expenseTotal) +
+                            "</span></div></div>";
                         h += "<div style='text-align:right;flex-shrink:0'>";
                         if (pl !== 0)
                             h +=
@@ -3577,7 +3681,7 @@
                         "<button onclick='expPDF()' style='padding:7px 12px;border-radius:9px;border:1px solid var(--bor);background:var(--s2);color:var(--grn);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit'>📄 PDF</button>";
                     if (canWrite())
                         h +=
-                            "<button class='btn-a' onclick='openTx(null,this.dataset.t)' data-t='deposit' style='padding:7px 12px;font-size:12px;white-space:nowrap'>+ Add</button>";
+                            "<button class='btn-a' onclick='openTx(null,this.dataset.t)' data-t='deposit' style='padding:7px 12px;font-size:12px;white-space:nowrap'>+ Add Payment</button>";
                     h += "</div></div>";
                     // Month label
                     h +=
@@ -4404,6 +4508,7 @@
 
             // ═══════════ INVESTMENTS (Advanced Project Tracker) ═══════════
             function openProject(id) {
+                S.tab = "investments";
                 S.activeProj = id;
                 S.projTab = "overview";
                 render();
@@ -4615,6 +4720,24 @@
                 var team = inv.teamEntries || [];
                 var tab2 = S._invTab || "overview";
                 var canMgr = isAdmin() || isProjectManager(inv);
+                var summaryStock = cols2.reduce(function (s, e) {
+                    return s + Number(e.kg || 0);
+                }, 0);
+                var summarySold = sales2.reduce(function (s, e) {
+                    return s + Number(e.soldKg || 0);
+                }, 0);
+                var summaryRevenue = (sales2.length ? sales2 : cols2).reduce(
+                    function (s, e) {
+                        return s + Number(e.revenue || 0);
+                    },
+                    0,
+                );
+                var summaryExpense = (inv.projectExpenses || []).reduce(
+                    function (s, e) {
+                        return s + Number(e.amount || 0);
+                    },
+                    0,
+                );
                 // Stock calculation
                 var stockMap = {};
                 cols2.forEach(function (e) {
@@ -4680,6 +4803,32 @@
 
                 // ── OVERVIEW ──
                 if (tab2 === "overview") {
+                    h += "<div class='g3' style='margin-bottom:12px'>";
+                    h +=
+                        "<div class='stat-box'><div class='lbl2'>MANAGER</div><div class='val' style='color:var(--grn);font-size:15px'>" +
+                        (inv.projectManagerName || "Unassigned") +
+                        "</div></div>";
+                    h +=
+                        "<div class='stat-box'><div class='lbl2'>TEAM</div><div class='val' style='color:var(--purple);font-size:15px'>" +
+                        team.length +
+                        "</div></div>";
+                    h +=
+                        "<div class='stat-box'><div class='lbl2'>DAILY STOCK / SALES</div><div class='val' style='color:var(--teal);font-size:15px'>" +
+                        summaryStock.toFixed(1) +
+                        " / " +
+                        summarySold.toFixed(1) +
+                        "</div></div>";
+                    h += "</div>";
+                    h += "<div class='g2' style='margin-bottom:12px'>";
+                    h +=
+                        "<div class='stat-box'><div class='lbl2'>AUTO REVENUE</div><div class='val' style='color:var(--green)'>" +
+                        fmt(summaryRevenue) +
+                        "</div></div>";
+                    h +=
+                        "<div class='stat-box'><div class='lbl2'>EXPENSES</div><div class='val' style='color:var(--orange)'>" +
+                        fmt(summaryExpense) +
+                        "</div></div>";
+                    h += "</div>";
                     h += "<div class='g4' style='margin-bottom:12px'>";
                     h +=
                         "<div class='stat-box'><div class='lbl2'>CAPITAL</div><div class='val' style='color:var(--gold)'>" +
@@ -5018,7 +5167,7 @@
                         h +=
                             "<button onclick='openProjectExpense(this.dataset.id)' data-id='" +
                             inv.id +
-                            "' style='padding:9px 14px;border-radius:10px;background:var(--orange);border:none;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit'>+ Expense</button>";
+                            "' style='padding:9px 14px;border-radius:10px;background:var(--orange);border:none;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit'>+ Add Expense</button>";
                     h += "</div>";
                     // Budget overview card
                     h +=
@@ -6485,7 +6634,7 @@
                 // Amount + Date
                 h += "<div class='g2'>";
                 h +=
-                    "<div><label class='lbl'>Amount (৳)</label><input id='tx-am' type='number' class='inp' value='" +
+                    "<div><label class='lbl'>Amount (BDT)</label><input id='tx-am' type='number' class='inp' value='" +
                     (t ? t.amount : "") +
                     "'/></div>";
                 h +=

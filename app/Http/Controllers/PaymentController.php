@@ -37,8 +37,8 @@ class PaymentController extends Controller
 
         $values = [
             'amount' => $request->amount,
-            'paid_at' => $request->status === 'paid' ? ($request->paid_at ?? now()) : null,
-            'status' => $request->status ?? 'pending',
+            'paid_at' => ($request->status ?? 'paid') === 'paid' ? ($request->paid_at ?? now()) : null,
+            'status' => $request->status ?? 'paid',
             'recorded_by' => $request->user()->id,
         ];
 
@@ -122,11 +122,11 @@ class PaymentController extends Controller
             } else {
                 $pending++;
             }
-            $lines[] = "{$status} — {$m->name} (৳{$m->monthly_due})";
+            $lines[] = "{$status} — {$m->name} (BDT {$m->monthly_due})";
         }
 
         $lines[] = "\nPaid: {$paid}/{$members->count()} · Pending: {$pending}";
-        $lines[] = "Total Collected: ৳" . $payments->where('status', 'paid')->sum('amount');
+        $lines[] = "Total Collected: BDT " . $payments->where('status', 'paid')->sum('amount');
 
         return response()->json(['text' => implode("\n", $lines)]);
     }
