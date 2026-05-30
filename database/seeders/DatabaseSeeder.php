@@ -9,6 +9,7 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
+            FirestoreBackupSqlSeeder::class,
             MemberSeeder::class,
             TransactionSeeder::class,
             ProjectSeeder::class,
