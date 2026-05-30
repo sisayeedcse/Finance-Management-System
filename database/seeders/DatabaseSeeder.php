@@ -10,11 +10,6 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             FirestoreBackupSqlSeeder::class,
-            MemberSeeder::class,
-            TransactionSeeder::class,
-            ProjectSeeder::class,
-            GoalSeeder::class,
-            ExpenseSeeder::class,
         ]);
     }
 }
