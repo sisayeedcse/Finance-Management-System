@@ -1665,6 +1665,7 @@
 
                 try {
                     const res = await fetch(`${API_BASE}${endpoint}`, options);
+                    // Handle unauthenticated explicitly
                     if (res.status === 401) {
                         AUTH_TOKEN = null;
                         localStorage.removeItem("auth_token");
@@ -1672,17 +1673,25 @@
                         window.location.href = "/";
                         return null;
                     }
-                    if (!res.ok) throw new Error(`API Error: ${res.status}`);
-                    // Try parse JSON, but some endpoints may return empty body
+
+                    // Read body text for both success and error cases
                     const txt = await res.text();
+                    let parsed = null;
                     try {
-                        return JSON.parse(txt || "null");
+                        parsed = JSON.parse(txt || "null");
                     } catch (e) {
-                        return txt;
+                        parsed = txt;
                     }
+
+                    if (!res.ok) {
+                        // Return the parsed error body so callers can show a helpful message
+                        return { error: true, status: res.status, body: parsed };
+                    }
+
+                    return parsed;
                 } catch (err) {
                     console.error(`API Error [${endpoint}]:`, err);
-                    return null;
+                    return { error: true, status: 0, body: err.message };
                 }
             }
 
@@ -3087,7 +3096,7 @@
                         if (ttl) {
                             if (S.activeProj) {
                                 var ap = S.invs.find(function (x) {
-                                    return x.id === S.activeProj;
+                                    return String(x.id) === String(S.activeProj);
                                 });
                                 if (ap) ttl.textContent = ap.name;
                             }
@@ -3354,7 +3363,7 @@
                 h +=
                     "<div style='display:grid;grid-template-columns:repeat(4,1fr);gap:8px'>";
                 [
-                    { icon: "💳", l: "Finance", tab: "finance" },
+                    { icon: "+", l: "Add Payment", tab: "finance" },
                     { icon: "📁", l: "Projects", tab: "investments" },
                     { icon: "🔎", l: "Search", tab: "search" },
                     { icon: "🔍", l: "Audit", tab: "activity" },
@@ -4507,14 +4516,27 @@
             }
 
             // ═══════════ INVESTMENTS (Advanced Project Tracker) ═══════════
-            function openProject(id) {
+            async function openProject(id) {
                 S.tab = "investments";
-                S.activeProj = id;
+                S.activeProj = String(id);
                 S.projTab = "overview";
+                S._activeProjLoading = true;
+                S._activeProjData = null;
                 render();
+                try {
+                    const proj = await API.getProject(id);
+                    if (proj) {
+                        S._activeProjData = proj;
+                    }
+                } finally {
+                    S._activeProjLoading = false;
+                    render();
+                }
             }
             function backToProjects() {
                 S.activeProj = null;
+                S._activeProjData = null;
+                S._activeProjLoading = false;
                 render();
             }
 
@@ -4705,12 +4727,74 @@
                         dd.style.display === "block" ? "none" : "block";
             }
 
-            function pProject(id) {
-                var inv = S.invs.find(function (x) {
-                    return x.id === id;
+            function getProjectById(invId) {
+                return S.invs.find(function (x) {
+                    return String(x.id) === String(invId);
                 });
-                if (!inv)
+            }
+
+            function recalcProjectLedger(cols, sales) {
+                var collections = (cols || []).map(function (entry) {
+                    return Object.assign({}, entry, {
+                        soldKg: 0,
+                        revenue: 0,
+                    });
+                });
+                var sortedSales = (sales || []).slice().sort(function (a, b) {
+                    return String(a.date || a.addedAt || "").localeCompare(
+                        String(b.date || b.addedAt || ""),
+                    );
+                });
+                var actualReturn = 0;
+                sortedSales.forEach(function (sale) {
+                    var qty = Number(sale.soldKg || 0);
+                    var price = Number(sale.pricePerKg || 0);
+                    var item =
+                        (sale.item || sale.plasticType || "Item").trim() ||
+                        "Item";
+                    actualReturn += Number(sale.revenue || 0);
+                    var remain = qty;
+                    for (
+                        var i = 0;
+                        i < collections.length && remain > 0;
+                        i++
+                    ) {
+                        var colItem =
+                            (
+                                collections[i].plasticType ||
+                                collections[i].item ||
+                                "Item"
+                            ).trim() || "Item";
+                        if (colItem !== item) continue;
+                        var available =
+                            Number(collections[i].kg || 0) -
+                            Number(collections[i].soldKg || 0);
+                        if (available <= 0) continue;
+                        var used = Math.min(available, remain);
+                        collections[i].soldKg =
+                            Number(collections[i].soldKg || 0) + used;
+                        collections[i].pricePerKg = price;
+                        collections[i].revenue =
+                            Number(collections[i].revenue || 0) +
+                            Math.round(used * price);
+                        remain -= used;
+                    }
+                });
+                return {
+                    collections: collections,
+                    sales: sortedSales,
+                    actualReturn: actualReturn,
+                };
+            }
+
+            function pProject(id) {
+                var inv = S._activeProjData || getProjectById(id);
+                if (!inv) {
+                    if (S._activeProjLoading) {
+                        return "<div class='card' style='text-align:center;padding:60px 24px;color:var(--mut)'>Loading project details...</div>";
+                    }
                     return "<div class='card' style='text-align:center;padding:60px 24px;color:var(--mut)'>Project not found.<br><br><button onclick='backToProjects()' class='btn-a'>&#x2190; Back</button></div>";
+                }
                 var dep2 = Number(inv.capitalDeployed || inv.amount || 0);
                 var ret2 = Number(inv.actualReturn || 0);
                 var exp = Number(inv.expectedReturn || 0);
@@ -4801,6 +4885,19 @@
                 h += "</div>";
                 h += "<div style='padding:18px 20px'>";
 
+                h +=
+                    "<div style='display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px'>";
+                h +=
+                    "<div><div style='font-size:10px;letter-spacing:2px;color:var(--mut);font-weight:700;margin-bottom:4px'>PROJECT DETAILS</div><div style='font-size:18px;font-weight:900'>" +
+                    inv.name +
+                    "</div></div>";
+                if (canMgr || isAdmin())
+                    h +=
+                        "<button class='btn-a' onclick='openInv(this.dataset.id)' data-id='" +
+                        inv.id +
+                        "'>✎ Edit Project</button>";
+                h += "</div>";
+
                 // ── OVERVIEW ──
                 if (tab2 === "overview") {
                     h += "<div class='g3' style='margin-bottom:12px'>";
@@ -4880,6 +4977,7 @@
                                 "' class='btn-a' style='font-size:11px;padding:5px 10px'>+ Add</button>";
                         h += "</div>";
                         capEntries.forEach(function (e) {
+                            var capIdx = capEntries.indexOf(e);
                             h +=
                                 "<div style='display:flex;align-items:center;padding:7px 0;border-bottom:1px solid var(--bor)'><div style='flex:1'><div style='font-size:13px;font-weight:800;color:var(--gold)'>" +
                                 fmt(e.amount) +
@@ -4887,7 +4985,15 @@
                                 (e.source || "SIPR Fund") +
                                 (e.date ? " · " + fd(e.date) : "") +
                                 (e.addedBy ? " · " + e.addedBy : "") +
-                                "</div></div></div>";
+                                "</div></div>" +
+                                ((isAdmin() || S.role === "finance")
+                                    ? "<button onclick='addCapital(this.dataset.id,this.dataset.ix)' data-id='" +
+                                      inv.id +
+                                      "' data-ix='" +
+                                      capIdx +
+                                      "' class='btn-a' style='padding:4px 8px;font-size:10px;flex-shrink:0;margin-left:8px'>Edit</button>"
+                                    : "") +
+                                "</div>";
                         });
                         h += "</div>";
                     } else if (isAdmin() || S.role === "finance") {
@@ -4948,6 +5054,13 @@
                                     (e2.source ? " · " + e2.source : "") +
                                     "</div>";
                                 h += "</div>";
+                                if (isAdmin() || canMgr)
+                                    h +=
+                                        "<button onclick='openCollection(this.dataset.id,this.dataset.ci)' data-id='" +
+                                        inv.id +
+                                        "' data-ci='" +
+                                        actualIdx +
+                                        "' class='btn-a' style='padding:4px 8px;font-size:10px;flex-shrink:0;margin-right:4px'>Edit</button>";
                                 h +=
                                     "<div style='text-align:right;flex-shrink:0'>";
                                 h +=
@@ -5015,7 +5128,11 @@
                         allSales
                             .slice()
                             .reverse()
-                            .forEach(function (e2) {
+                            .forEach(function (e2, si) {
+                                var actualIdx =
+                                    sales2.length > 0
+                                        ? sales2.length - 1 - si
+                                        : null;
                                 var qty = Number(e2.soldKg || 0);
                                 h +=
                                     "<div style='background:var(--s2);border:1px solid var(--bor);border-radius:12px;padding:11px 14px;display:flex;align-items:center;gap:10px'>";
@@ -5041,6 +5158,13 @@
                                     fmt(e2.revenue || 0) +
                                     "</div>";
                                 h += "</div></div>";
+                                if ((isAdmin() || canMgr) && actualIdx != null)
+                                    h +=
+                                        "<button onclick='openSale(this.dataset.id,this.dataset.si)' data-id='" +
+                                        inv.id +
+                                        "' data-si='" +
+                                        actualIdx +
+                                        "' class='btn-a' style='padding:4px 8px;font-size:10px;flex-shrink:0;margin-left:4px'>Edit</button>";
                             });
                         h += "</div>";
                     }
@@ -5231,6 +5355,13 @@
                                     "<div style='font-size:13px;font-weight:900;color:var(--orange);flex-shrink:0'>-" +
                                     fmt(e.amount) +
                                     "</div>";
+                                if (isAdmin() || canMgr)
+                                    h +=
+                                        "<button onclick='openProjectExpense(this.dataset.id,this.dataset.ei)' data-id='" +
+                                        inv.id +
+                                        "' data-ei='" +
+                                        actualIdx +
+                                        "' class='btn-a' style='padding:4px 8px;font-size:10px;flex-shrink:0;margin-left:4px'>Edit</button>";
                                 if (isAdmin())
                                     h +=
                                         "<button onclick='delProjectExpense(this.dataset.id,this.dataset.ei)' data-id='" +
@@ -5313,6 +5444,13 @@
                             h += "</div>";
                             if (canMgr)
                                 h +=
+                                    "<button onclick='addTeamMember(this.dataset.id,this.dataset.ti)' data-id='" +
+                                    inv.id +
+                                    "' data-ti='" +
+                                    ti +
+                                    "' class='btn-a' style='padding:4px 8px;font-size:10px;flex-shrink:0;margin-right:6px'>Edit</button>";
+                            if (canMgr)
+                                h +=
                                     "<button onclick='removeTeamMember(this.dataset.id,this.dataset.ti)' data-id='" +
                                     inv.id +
                                     "' data-ti='" +
@@ -5331,9 +5469,7 @@
             }
 
             function setManager(invId) {
-                var inv = S.invs.find(function (x) {
-                    return x.id === invId;
-                });
+                var inv = getProjectById(invId);
                 if (!inv) return;
                 var h =
                     "<div class='modal-bg' onclick='if(event.target===this)closeModal()'><div class='modal-box'>";
@@ -5383,10 +5519,8 @@
                     }
                 })();
             }
-            function addTeamMember(invId) {
-                var inv = S.invs.find(function (x) {
-                    return x.id === invId;
-                });
+            function addTeamMember(invId, idx) {
+                var inv = getProjectById(invId);
                 if (!inv) return;
                 var existIds = (inv.teamEntries || [])
                     .filter(function (t) {
@@ -5395,15 +5529,19 @@
                     .map(function (t) {
                         return t.memberId;
                     });
+                var editing = idx != null && idx !== "";
+                var current = editing ? (inv.teamEntries || [])[Number(idx)] : null;
                 var h =
                     "<div class='modal-bg' onclick='if(event.target===this)closeModal()'><div class='modal-box'>";
                 h +=
-                    "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:16px'><div style='font-weight:800;font-size:17px'>Add Team Member</div><button onclick='closeModal()' style='background:none;border:none;color:var(--mut);font-size:20px;cursor:pointer'>&#x2715;</button></div>";
+                    "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:16px'><div style='font-weight:800;font-size:17px'>" +
+                    (editing ? "Edit" : "Add") +
+                    " Team Member</div><button onclick='closeModal()' style='background:none;border:none;color:var(--mut);font-size:20px;cursor:pointer'>&#x2715;</button></div>";
                 h +=
                     "<div class='fc'><div><label class='lbl'>SIPR Member or External</label><select id='tm-sel' class='inp'>";
                 h += "<option value='external'>+ Add External Person</option>";
                 S.mems.forEach(function (m) {
-                    if (existIds.indexOf(m.id) < 0)
+                    if (existIds.indexOf(m.id) < 0 || (current && current.memberId === m.id))
                         h +=
                             "<option value='" +
                             m.id +
@@ -5415,21 +5553,28 @@
                 });
                 h += "</select></div>";
                 h +=
-                    "<div><label class='lbl'>External Name (if not SIPR member)</label><input id='tm-extname' type='text' class='inp' placeholder='Full name of external person'/></div>";
+                    "<div><label class='lbl'>External Name (if not SIPR member)</label><input id='tm-extname' type='text' class='inp' placeholder='Full name of external person' value='" +
+                    (current && current.isExternal ? current.name : "") +
+                    "'/></div>";
                 h +=
-                    "<div><label class='lbl'>Role in Project</label><input id='tm-role' type='text' class='inp' placeholder='Manager, Driver, Field Worker, Accountant...'/></div>";
+                    "<div><label class='lbl'>Role in Project</label><input id='tm-role' type='text' class='inp' placeholder='Manager, Driver, Field Worker, Accountant...' value='" +
+                    (current ? current.role || "" : "") +
+                    "'/></div>";
                 h +=
-                    "<button class='btn-p' onclick='saveTeamMember(this.dataset.id)' data-id='" +
+                    "<button class='btn-p' onclick='saveTeamMember(this.dataset.id,this.dataset.ix)' data-id='" +
                     invId +
-                    "'>Add to Team</button></div></div></div>";
+                    "' data-ix='" +
+                    (idx != null ? idx : "") +
+                    "'>" +
+                    (editing ? "Save Team Member" : "Add to Team") +
+                    "</button></div></div></div>";
                 $("modal").innerHTML = h;
+                if (current && current.memberId) $("tm-sel").value = current.memberId;
             }
-            function saveTeamMember(invId) {
+            function saveTeamMember(invId, idx) {
                 var sel = ($("tm-sel") || { value: "external" }).value;
                 var role = ($("tm-role") || { value: "" }).value.trim();
-                var inv = S.invs.find(function (x) {
-                    return x.id === invId;
-                });
+                var inv = getProjectById(invId);
                 if (!inv) return;
                 var entry;
                 if (sel === "external") {
@@ -5455,12 +5600,16 @@
                     };
                 }
                 var team = (inv.teamEntries || []).slice();
-                team.push(entry);
+                if (idx != null && idx !== "") team[Number(idx)] = entry;
+                else team.push(entry);
                 (async () => {
                     try {
                         await API.updateProject(invId, { teamEntries: team });
                         closeModal();
-                        toast(entry.name + " added!");
+                        toast(
+                            entry.name +
+                                (idx != null && idx !== "" ? " updated!" : " added!"),
+                        );
                     } catch (e) {
                         toast(e.message || "Error adding team member", false);
                     }
@@ -5468,9 +5617,7 @@
             }
             function removeTeamMember(invId, idx) {
                 if (!confirm("Remove this team member?")) return;
-                var inv = S.invs.find(function (x) {
-                    return x.id === invId;
-                });
+                var inv = getProjectById(invId);
                 if (!inv) return;
                 var team = (inv.teamEntries || []).slice();
                 team.splice(Number(idx), 1);
@@ -5485,9 +5632,7 @@
             }
             // Contacts
             function openContact(invId, type, idx) {
-                var inv = S.invs.find(function (x) {
-                    return x.id === invId;
-                });
+                var inv = getProjectById(invId);
                 if (!inv) return;
                 var list = type === 0 ? inv.suppliers || [] : inv.buyers || [];
                 var item = idx != null ? list[idx] : null;
@@ -5558,9 +5703,7 @@
                     note: ($("ct-nt") || { value: "" }).value.trim(),
                     active: ($("ct-ac") || { checked: true }).checked,
                 };
-                var inv = S.invs.find(function (x) {
-                    return x.id === invId;
-                });
+                var inv = getProjectById(invId);
                 if (!inv) return;
                 var field = type === 0 ? "suppliers" : "buyers";
                 var list = (inv[field] || []).slice();
@@ -5580,9 +5723,7 @@
             }
             function delContact(invId, type, idx) {
                 if (!confirm("Delete this contact?")) return;
-                var inv = S.invs.find(function (x) {
-                    return x.id === invId;
-                });
+                var inv = getProjectById(invId);
                 if (!inv) return;
                 var field = type === 0 ? "suppliers" : "buyers";
                 var list = (inv[field] || []).slice();
@@ -5632,9 +5773,7 @@
                     amount: am,
                     date: ($("ei-dt") || { value: "" }).value,
                 };
-                var inv = S.invs.find(function (x) {
-                    return x.id === invId;
-                });
+                var inv = getProjectById(invId);
                 if (!inv) return;
                 var list = (inv.externalInvestors || []).slice();
                 list.push(item);
@@ -5652,9 +5791,7 @@
             }
             function delExtInv(invId, idx) {
                 if (!confirm("Remove?")) return;
-                var inv = S.invs.find(function (x) {
-                    return x.id === invId;
-                });
+                var inv = getProjectById(invId);
                 if (!inv) return;
                 var list = (inv.externalInvestors || []).slice();
                 list.splice(idx, 1);
@@ -5670,15 +5807,17 @@
                 })();
             }
             // Collection
-            function openCollection(invId) {
-                var inv = S.invs.find(function (x) {
-                    return x.id === invId;
-                });
+            function openCollection(invId, idx) {
+                var inv = getProjectById(invId);
                 if (!inv) return;
+                var editing = idx != null && idx !== "";
+                var current = editing ? (inv.collections || [])[Number(idx)] : null;
                 var h =
                     "<div class='modal-bg' onclick='if(event.target===this)closeModal()'><div class='modal-box'>";
                 h +=
-                    "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:14px'><div style='font-weight:800;font-size:17px'>&#x1F4E6; Add Collection</div><button onclick='closeModal()' style='background:none;border:none;color:var(--mut);font-size:22px;cursor:pointer;line-height:1'>&#xD7;</button></div>";
+                    "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:14px'><div style='font-weight:800;font-size:17px'>&#x1F4E6; " +
+                    (editing ? "Edit" : "Add") +
+                    " Collection</div><button onclick='closeModal()' style='background:none;border:none;color:var(--mut);font-size:22px;cursor:pointer;line-height:1'>&#xD7;</button></div>";
                 h +=
                     "<div style='background:var(--gdm);border:1px solid var(--gbr);border-radius:10px;padding:9px 13px;margin-bottom:14px'><div style='font-size:11px;color:var(--mut)'>Project</div><div style='font-size:14px;font-weight:800'>" +
                     inv.name +
@@ -5686,27 +5825,38 @@
                 h += "<div class='fc'>";
                 h +=
                     "<div><label class='lbl'>Date *</label><input id='cl-dt' type='date' class='inp' value='" +
-                    new Date().toISOString().split("T")[0] +
+                    (current ? current.date : new Date().toISOString().split("T")[0]) +
                     "'/></div>";
                 h +=
-                    "<div><label class='lbl'>Source / Location</label><input id='cl-src' type='text' class='inp' placeholder='Market, supplier, location...'/></div>";
+                    "<div><label class='lbl'>Source / Location</label><input id='cl-src' type='text' class='inp' placeholder='Market, supplier, location...' value='" +
+                    (current ? current.source || "" : "") +
+                    "'/></div>";
                 h +=
                     "<div class='g2'><div><label class='lbl'>Quantity *</label><input id='cl-kg' type='number' class='inp' step='0.01' placeholder='0' min='0'/></div><div><label class='lbl'>Unit</label><input id='cl-unit' type='text' class='inp' value='" +
-                    (inv.defaultUnit || "pcs") +
+                    (current ? current.unit || inv.defaultUnit || "pcs" : inv.defaultUnit || "pcs") +
                     "'/></div></div>";
                 h +=
-                    "<div><label class='lbl'>Item Type</label><input id='cl-tp' type='text' class='inp' placeholder='LED Bulb, PET Bottle...'/></div>";
+                    "<div><label class='lbl'>Item Type</label><input id='cl-tp' type='text' class='inp' placeholder='LED Bulb, PET Bottle...' value='" +
+                    (current ? current.plasticType || current.item || "" : "") +
+                    "'/></div>";
                 h +=
-                    "<div><label class='lbl'>Notes</label><input id='cl-nt' type='text' class='inp' placeholder='Any additional info...'/></div>";
+                    "<div><label class='lbl'>Notes</label><input id='cl-nt' type='text' class='inp' placeholder='Any additional info...' value='" +
+                    (current ? current.note || "" : "") +
+                    "'/></div>";
                 h +=
-                    "<button id='cl-save-btn' class='btn-p' onclick='saveCollection(this.dataset.id)' data-id='" +
+                    "<button id='cl-save-btn' class='btn-p' onclick='saveCollection(this.dataset.id,this.dataset.ci)' data-id='" +
                     invId +
-                    "'>Save Collection</button>";
+                    "' data-ci='" +
+                    (idx != null ? idx : "") +
+                    "'>" +
+                    (editing ? "Save Changes" : "Save Collection") +
+                    "</button>";
                 h += "</div></div></div>";
                 $("modal").innerHTML = h;
+                if (current) $("cl-kg").value = current.kg || "";
             }
 
-            function saveCollection(invId) {
+            function saveCollection(invId, idx) {
                 // Prevent double-tap
                 var btn = $("cl-save-btn");
                 if (btn) {
@@ -5738,9 +5888,7 @@
                     addedBy: S.name,
                     addedAt: now(),
                 };
-                var inv = S.invs.find(function (x) {
-                    return x.id === invId;
-                });
+                var inv = getProjectById(invId);
                 if (!inv) {
                     if (btn) {
                         btn.disabled = false;
@@ -5749,16 +5897,28 @@
                     return;
                 }
                 var cols2 = (inv.collections || []).slice();
-                cols2.push(entry);
+                if (idx != null && idx !== "") cols2[Number(idx)] = entry;
+                else cols2.push(entry);
                 (async () => {
                     try {
-                        await API.updateProject(invId, { collections: cols2 });
+                        var rec = recalcProjectLedger(cols2, inv.sales || []);
+                        await API.updateProject(invId, {
+                            collections: rec.collections,
+                            sales: rec.sales,
+                            actualReturn: rec.actualReturn,
+                        });
                         closeModal();
                         logAct(
-                            "add_collection",
+                            idx != null && idx !== ""
+                                ? "edit_collection"
+                                : "add_collection",
                             Number(qty) + " " + unit + " — " + inv.name,
                         );
-                        toast("&#x2713; Collection saved!");
+                        toast(
+                            idx != null && idx !== ""
+                                ? "&#x2713; Collection updated!"
+                                : "&#x2713; Collection saved!",
+                        );
                     } catch (e) {
                         toast(e.message || "Error saving collection", false);
                     } finally {
@@ -5772,24 +5932,30 @@
 
             // ── Sale functions ────────────────────────────────────────────
             // ── Budget / Expense functions ─────────────────────────────────
-            function openProjectExpense(invId) {
-                var inv = S.invs.find(function (x) {
-                    return x.id === invId;
-                });
+            function openProjectExpense(invId, idx) {
+                var inv = getProjectById(invId);
                 if (!inv) return;
+                var editing = idx != null && idx !== "";
+                var current = editing ? (inv.projectExpenses || [])[Number(idx)] : null;
                 var h =
                     "<div class='modal-bg' onclick='if(event.target===this)closeModal()'><div class='modal-box'>";
                 h +=
-                    "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:14px'><div style='font-weight:800;font-size:17px'>&#x1F4C4; Add Expense</div><button onclick='closeModal()' style='background:none;border:none;color:var(--mut);font-size:22px;cursor:pointer;line-height:1'>&#xD7;</button></div>";
+                    "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:14px'><div style='font-weight:800;font-size:17px'>&#x1F4C4; " +
+                    (editing ? "Edit" : "Add") +
+                    " Expense</div><button onclick='closeModal()' style='background:none;border:none;color:var(--mut);font-size:22px;cursor:pointer;line-height:1'>&#xD7;</button></div>";
                 h += "<div class='fc'>";
                 h +=
                     "<div><label class='lbl'>Date *</label><input id='pe-dt' type='date' class='inp' value='" +
-                    new Date().toISOString().split("T")[0] +
+                    (current ? current.date : new Date().toISOString().split("T")[0]) +
                     "'/></div>";
                 h +=
-                    "<div><label class='lbl'>Description *</label><input id='pe-desc' type='text' class='inp' placeholder='Transport, tools, materials...'/></div>";
+                    "<div><label class='lbl'>Description *</label><input id='pe-desc' type='text' class='inp' placeholder='Transport, tools, materials...' value='" +
+                    (current ? current.desc || "" : "") +
+                    "'/></div>";
                 h +=
-                    "<div><label class='lbl'>Amount (BDT) *</label><input id='pe-amt' type='number' class='inp' placeholder='0' min='0'/></div>";
+                    "<div><label class='lbl'>Amount (BDT) *</label><input id='pe-amt' type='number' class='inp' placeholder='0' min='0' value='" +
+                    (current ? current.amount || "" : "") +
+                    "'/></div>";
                 h +=
                     "<div><label class='lbl'>Category</label><select id='pe-cat' class='inp'>";
                 [
@@ -5804,15 +5970,21 @@
                 });
                 h += "</select></div>";
                 h +=
-                    "<div><label class='lbl'>Note</label><input id='pe-note' type='text' class='inp' placeholder='Details...'/></div>";
+                    "<div><label class='lbl'>Note</label><input id='pe-note' type='text' class='inp' placeholder='Details...' value='" +
+                    (current ? current.note || "" : "") +
+                    "'/></div>";
                 h +=
-                    "<button id='pe-save-btn' class='btn-p' onclick='saveProjectExpense(this.dataset.id)' data-id='" +
+                    "<button id='pe-save-btn' class='btn-p' onclick='saveProjectExpense(this.dataset.id,this.dataset.ei)' data-id='" +
                     invId +
-                    "'>Save Expense</button>";
+                    "' data-ei='" +
+                    (idx != null ? idx : "") +
+                    "'>" +
+                    (editing ? "Save Changes" : "Save Expense") +
+                    "</button>";
                 h += "</div></div></div>";
                 $("modal").innerHTML = h;
             }
-            function saveProjectExpense(invId) {
+            function saveProjectExpense(invId, idx) {
                 var btn = $("pe-save-btn");
                 if (btn) {
                     btn.disabled = true;
@@ -5838,22 +6010,25 @@
                     addedBy: S.name,
                     addedAt: now(),
                 };
-                var inv = S.invs.find(function (x) {
-                    return x.id === invId;
-                });
+                var inv = getProjectById(invId);
                 if (!inv) {
                     if (btn) btn.disabled = false;
                     return;
                 }
                 var expenses = (inv.projectExpenses || []).slice();
-                expenses.push(entry);
+                if (idx != null && idx !== "") expenses[Number(idx)] = entry;
+                else expenses.push(entry);
                 (async () => {
                     try {
                         await API.updateProject(invId, {
                             projectExpenses: expenses,
                         });
                         closeModal();
-                        toast("&#x2713; Expense recorded!");
+                        toast(
+                            idx != null && idx !== ""
+                                ? "&#x2713; Expense updated!"
+                                : "&#x2713; Expense recorded!",
+                        );
                     } catch (e) {
                         toast(e.message || "Error saving expense", false);
                         if (btn) {
@@ -5865,9 +6040,7 @@
             }
             function delProjectExpense(invId, idx) {
                 if (!confirm("Delete this expense?")) return;
-                var inv = S.invs.find(function (x) {
-                    return x.id === invId;
-                });
+                var inv = getProjectById(invId);
                 if (!inv) return;
                 var expenses = (inv.projectExpenses || []).slice();
                 expenses.splice(idx, 1);
@@ -5883,12 +6056,48 @@
                 })();
             }
 
-            function openSale(invId) {
-                var inv = S.invs.find(function (x) {
-                    return x.id === invId;
-                });
+            function openSale(invId, idx) {
+                var inv = getProjectById(invId);
                 if (!inv) return;
                 var cols2 = inv.collections || [];
+                var editing = idx != null && idx !== "";
+                var current = editing ? (inv.sales || [])[Number(idx)] : null;
+                if (editing) {
+                    var hEdit =
+                        "<div class='modal-bg' onclick='if(event.target===this)closeModal()'><div class='modal-box'>";
+                    hEdit +=
+                        "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:14px'><div style='font-weight:800;font-size:17px'>&#x1F4B5; Edit Sale</div><button onclick='closeModal()' style='background:none;border:none;color:var(--mut);font-size:22px;cursor:pointer;line-height:1'>&#xD7;</button></div>";
+                    hEdit += "<div class='fc'>";
+                    hEdit +=
+                        "<div><label class='lbl'>Date *</label><input id='sl-dt' type='date' class='inp' value='" +
+                        (current ? current.date : new Date().toISOString().split("T")[0]) +
+                        "'/></div>";
+                    hEdit +=
+                        "<div><label class='lbl'>Item *</label><input id='sl-item' type='text' class='inp' value='" +
+                        (current ? current.item || current.plasticType || "" : "") +
+                        "'/></div>";
+                    hEdit +=
+                        "<div><label class='lbl'>Quantity *</label><input id='sl-qty' type='number' step='0.01' min='0.01' class='inp' value='" +
+                        (current ? current.soldKg || "" : "") +
+                        "'/></div>";
+                    hEdit +=
+                        "<div><label class='lbl'>Price / unit (BDT) *</label><input id='sl-pp' type='number' step='0.01' min='0' class='inp' value='" +
+                        (current ? current.pricePerKg || "" : "") +
+                        "'/></div>";
+                    hEdit +=
+                        "<div><label class='lbl'>Buyer / Note</label><input id='sl-note' type='text' class='inp' value='" +
+                        (current ? current.note || "" : "") +
+                        "'/></div>";
+                    hEdit +=
+                        "<button id='sl-save-btn' class='btn-p' onclick='saveSale(this.dataset.id,this.dataset.si)' data-id='" +
+                        invId +
+                        "' data-si='" +
+                        idx +
+                        "' style='background:linear-gradient(135deg,var(--green),var(--teal))'>&#x1F4B5; Save Changes</button>";
+                    hEdit += "</div></div></div>";
+                    $("modal").innerHTML = hEdit;
+                    return;
+                }
                 // Build stock per item
                 var stockMap = {};
                 cols2.forEach(function (e) {
@@ -6022,7 +6231,7 @@
                     qty = $("sl-qty");
                 if (hint && qty) hint.textContent = "";
             }
-            function saveSale(invId) {
+            function saveSale(invId, idx) {
                 var btn = $("sl-save-btn");
                 if (btn) {
                     btn.disabled = true;
@@ -6041,40 +6250,13 @@
                     return;
                 }
                 var revenue = Math.round(qty * pp);
-                var inv = S.invs.find(function (x) {
-                    return x.id === invId;
-                });
+                var inv = getProjectById(invId);
                 if (!inv) {
                     if (btn) {
                         btn.disabled = false;
                     }
                     return;
                 }
-                var cols2 = (inv.collections || []).slice();
-                // Validate stock
-                var totalCollected = 0,
-                    totalSold = 0;
-                cols2.forEach(function (e) {
-                    if ((e.plasticType || e.item || "Item").trim() === item) {
-                        totalCollected += Number(e.kg || 0);
-                        totalSold += Number(e.soldKg || 0);
-                    }
-                });
-                var available = totalCollected - totalSold;
-                if (qty > available) {
-                    toast(
-                        "Cannot sell more than available stock (" +
-                            available.toFixed(2) +
-                            ")",
-                        false,
-                    );
-                    if (btn) {
-                        btn.disabled = false;
-                        btn.textContent = "&#x1F4B5; Record Sale";
-                    }
-                    return;
-                }
-                // Record sale as a sale entry (separate from collection)
                 var saleEntry = {
                     date: dt,
                     type: "sale",
@@ -6086,42 +6268,29 @@
                     addedBy: S.name,
                     addedAt: now(),
                 };
-                // Also update soldKg on collections (FIFO)
-                var remainToSell = qty;
-                for (var i = 0; i < cols2.length && remainToSell > 0; i++) {
-                    if (
-                        (
-                            cols2[i].plasticType ||
-                            cols2[i].item ||
-                            "Item"
-                        ).trim() !== item
-                    )
-                        continue;
-                    var avail2 =
-                        Number(cols2[i].kg || 0) - Number(cols2[i].soldKg || 0);
-                    if (avail2 <= 0) continue;
-                    var sellFromThis = Math.min(avail2, remainToSell);
-                    cols2[i].soldKg =
-                        Number(cols2[i].soldKg || 0) + sellFromThis;
-                    cols2[i].pricePerKg = pp;
-                    cols2[i].revenue =
-                        Number(cols2[i].revenue || 0) +
-                        Math.round(sellFromThis * pp);
-                    remainToSell -= sellFromThis;
-                }
                 var sales = (inv.sales || []).slice();
-                sales.push(saleEntry);
-                var newReturn = Number(inv.actualReturn || 0) + revenue;
+                if (idx != null && idx !== "") sales[Number(idx)] = saleEntry;
+                else sales.push(saleEntry);
+                var rec = recalcProjectLedger(inv.collections || [], sales);
                 (async () => {
                     try {
                         await API.updateProject(invId, {
-                            collections: cols2,
-                            sales: sales,
-                            actualReturn: newReturn,
+                            collections: rec.collections,
+                            sales: rec.sales,
+                            actualReturn: rec.actualReturn,
                         });
                         closeModal();
-                        logAct("record_sale", fmt(revenue) + " — " + inv.name);
-                        toast("&#x2713; Sale recorded!");
+                        logAct(
+                            idx != null && idx !== ""
+                                ? "edit_sale"
+                                : "record_sale",
+                            fmt(revenue) + " — " + inv.name,
+                        );
+                        toast(
+                            idx != null && idx !== ""
+                                ? "&#x2713; Sale updated!"
+                                : "&#x2713; Sale recorded!",
+                        );
                     } catch (e) {
                         toast(e.message || "Error recording sale", false);
                         if (btn) {
@@ -6132,40 +6301,50 @@
                 })();
             }
 
-            function addCapital(invId) {
-                var inv = S.invs.find(function (x) {
-                    return x.id === invId;
-                });
+            function addCapital(invId, idx) {
+                var inv = getProjectById(invId);
                 if (!inv) return;
+                var editing = idx != null && idx !== "";
+                var current = editing ? (inv.capitalEntries || [])[Number(idx)] : null;
                 var h =
                     "<div class='modal-bg' onclick='if(event.target===this)closeModal()'><div class='modal-box'>";
                 h +=
-                    "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:16px'><div style='font-weight:800;font-size:17px'>+ Add Capital</div><button onclick='closeModal()' style='background:none;border:none;color:var(--mut);font-size:20px;cursor:pointer'>&#x2715;</button></div>";
+                    "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:16px'><div style='font-weight:800;font-size:17px'>" +
+                    (editing ? "Edit" : "+ Add") +
+                    " Capital</div><button onclick='closeModal()' style='background:none;border:none;color:var(--mut);font-size:20px;cursor:pointer'>&#x2715;</button></div>";
                 h +=
-                    "<div class='fc'><div><label class='lbl'>Amount (BDT) *</label><input id='cap-am' type='number' class='inp' placeholder='0'/></div>";
-                h +=
-                    "<div><label class='lbl'>Source</label><input id='cap-src' type='text' class='inp' value='SIPR Fund'/></div>";
-                h +=
-                    "<div><label class='lbl'>Date</label><input id='cap-dt' type='date' class='inp' value='" +
-                    new Date().toISOString().split("T")[0] +
+                    "<div class='fc'><div><label class='lbl'>Amount (BDT) *</label><input id='cap-am' type='number' class='inp' placeholder='0' value='" +
+                    (current ? current.amount || "" : "") +
                     "'/></div>";
                 h +=
-                    "<div><label class='lbl'>Note</label><input id='cap-nt' type='text' class='inp' placeholder='Reason...'/></div>";
+                    "<div><label class='lbl'>Source</label><input id='cap-src' type='text' class='inp' value='" +
+                    (current ? current.source || "SIPR Fund" : "SIPR Fund") +
+                    "'/></div>";
                 h +=
-                    "<button class='btn-p' onclick='saveCapital(this.dataset.id)' data-id='" +
+                    "<div><label class='lbl'>Date</label><input id='cap-dt' type='date' class='inp' value='" +
+                    (current ? current.date : new Date().toISOString().split("T")[0]) +
+                    "'/></div>";
+                h +=
+                    "<div><label class='lbl'>Note</label><input id='cap-nt' type='text' class='inp' placeholder='Reason...' value='" +
+                    (current ? current.note || "" : "") +
+                    "'/></div>";
+                h +=
+                    "<button class='btn-p' onclick='saveCapital(this.dataset.id,this.dataset.ix)' data-id='" +
                     invId +
-                    "'>Add Capital</button></div></div></div>";
+                    "' data-ix='" +
+                    (idx != null ? idx : "") +
+                    "'>" +
+                    (editing ? "Save Changes" : "Add Capital") +
+                    "</button></div></div></div>";
                 $("modal").innerHTML = h;
             }
-            function saveCapital(invId) {
+            function saveCapital(invId, idx) {
                 var amt = Number(($("cap-am") || { value: 0 }).value) || 0;
                 if (!amt) {
                     toast("Amount required", false);
                     return;
                 }
-                var inv = S.invs.find(function (x) {
-                    return x.id === invId;
-                });
+                var inv = getProjectById(invId);
                 if (!inv) return;
                 var entry = {
                     amount: amt,
@@ -6178,7 +6357,8 @@
                     addedAt: now(),
                 };
                 var entries = (inv.capitalEntries || []).slice();
-                entries.push(entry);
+                if (idx != null && idx !== "") entries[Number(idx)] = entry;
+                else entries.push(entry);
                 var totalCap = entries.reduce(function (s, e) {
                     return s + Number(e.amount || 0);
                 }, 0);
@@ -6190,7 +6370,12 @@
                             amount: totalCap,
                         });
                         closeModal();
-                        toast("Capital added: " + fmt(amt));
+                        toast(
+                            (idx != null && idx !== ""
+                                ? "Capital updated: "
+                                : "Capital added: ") +
+                                fmt(amt),
+                        );
                     } catch (e) {
                         toast(e.message || "Error adding capital", false);
                     }
@@ -6198,11 +6383,7 @@
             }
             // Open/Save investment
             function openInv(id) {
-                var inv = id
-                    ? S.invs.find(function (x) {
-                          return x.id === id;
-                      })
-                    : null;
+                var inv = id ? getProjectById(id) : null;
                 var IS_K = [
                     "active",
                     "planning",
@@ -6273,14 +6454,22 @@
                     return;
                 }
                 var amt = Number(($("in-am") || { value: 0 }).value) || 0;
-                var ex = id
-                    ? S.invs.find(function (x) {
-                          return x.id === id;
-                      })
-                    : null;
+                                var ex = id ? getProjectById(id) : null;
                 var capitalEntries =
                     ex && ex.capitalEntries ? ex.capitalEntries.slice() : [];
                 if (!ex && amt > 0)
+                    capitalEntries = [
+                        {
+                            amount: amt,
+                            date: dt,
+                            source: (
+                                $("in-cs") || { value: "SIPR Fund" }
+                            ).value.trim(),
+                            addedBy: S.name,
+                            addedAt: now(),
+                        },
+                    ];
+                else if (ex && capitalEntries.length === 0 && amt > 0)
                     capitalEntries = [
                         {
                             amount: amt,
@@ -6336,10 +6525,11 @@
                         const res = id
                             ? await API.updateProject(id, data)
                             : await API.createProject(data);
-                        if (!res || res.error)
-                            throw new Error(
-                                res?.message || "Failed to save project",
-                            );
+                        if (!res || res.error) {
+                            // Prefer server-provided message when available for debugging
+                            const serverMsg = res?.body?.message || res?.body || res?.message;
+                            throw new Error(serverMsg || "Failed to save project");
+                        }
                         closeModal();
                         logAct(
                             id ? "edit_investment" : "add_investment",
@@ -6373,9 +6563,7 @@
             }
             function delCollection(invId, idx) {
                 if (!confirm("Delete this entry?")) return;
-                var inv = S.invs.find(function (x) {
-                    return x.id === invId;
-                });
+                var inv = getProjectById(invId);
                 if (!inv) return;
                 var cols2 = (inv.collections || []).slice();
                 var rev = Number(cols2[idx].revenue || 0);
@@ -6410,9 +6598,7 @@
                     toast("Title required", false);
                     return;
                 }
-                var inv = S.invs.find(function (x) {
-                    return x.id === invId;
-                });
+                var inv = getProjectById(invId);
                 if (!inv) return;
                 var ms = (inv.milestones || []).slice();
                 ms.push({
@@ -6432,9 +6618,7 @@
                 })();
             }
             function toggleMilestone(invId, idx) {
-                var inv = S.invs.find(function (x) {
-                    return x.id === invId;
-                });
+                var inv = getProjectById(invId);
                 if (!inv) return;
                 var ms = (inv.milestones || []).slice();
                 ms[idx].done = !ms[idx].done;

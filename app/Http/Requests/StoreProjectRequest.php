@@ -17,8 +17,13 @@ class StoreProjectRequest extends FormRequest
             'name' => 'required|string|max:200',
             'description' => 'nullable|string',
             'type' => 'nullable|string|max:100',
-            'capital' => 'required|numeric|min:0',
-            'started_at' => 'required|date',
+            // Accept capital in several possible fields the SPA may send
+            'capital' => 'nullable|numeric|min:0',
+            'capitalDeployed' => 'nullable|numeric|min:0',
+            'amount' => 'nullable|numeric|min:0',
+            // Accept either started_at or date from the SPA; both optional
+            'started_at' => 'nullable|date',
+            'date' => 'nullable|date',
         ];
     }
 }
