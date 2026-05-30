@@ -29,6 +29,7 @@ class ProjectController extends Controller
             'description',
             'type',
             'status',
+            'source_id',
             'capital',
             'returned',
             'expected',
@@ -38,11 +39,14 @@ class ProjectController extends Controller
             'projectManagerId',
             'projectManagerName',
             'teamEntries',
+            'teamMembers',
             'collections',
             'sales',
+            'buyers',
             'projectExpenses',
             'capitalEntries',
             'phases',
+            'partner',
             'amount',
             'capitalDeployed',
             'expectedReturn',
@@ -50,6 +54,7 @@ class ProjectController extends Controller
             'sector',
             'date',
             'notes',
+            'source_payload',
         ]));
         ActivityService::log('create_project', "Created project: {$project->name}", $request->user()->id);
 
@@ -64,6 +69,7 @@ class ProjectController extends Controller
             'description',
             'type',
             'status',
+            'source_id',
             'capital',
             'returned',
             'expected',
@@ -73,11 +79,14 @@ class ProjectController extends Controller
             'projectManagerId',
             'projectManagerName',
             'teamEntries',
+            'teamMembers',
             'collections',
             'sales',
+            'buyers',
             'projectExpenses',
             'capitalEntries',
             'phases',
+            'partner',
             'amount',
             'capitalDeployed',
             'expectedReturn',
@@ -85,6 +94,7 @@ class ProjectController extends Controller
             'sector',
             'date',
             'notes',
+            'source_payload',
         ]));
         ActivityService::log('update_project', "Updated project: {$project->name}", $request->user()->id);
         return response()->json($project);

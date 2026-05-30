@@ -9,13 +9,16 @@ class ProjectMilestone extends Model
 {
     use HasFactory;
 
+    public $timestamps = false;
+
     protected $fillable = [
-        'project_id', 'title', 'achieved', 'achieved_at', 'sort_order'
+        'project_id', 'title', 'note', 'achieved', 'achieved_at', 'sort_order', 'source_payload'
     ];
 
     protected $casts = [
         'achieved' => 'boolean',
         'achieved_at' => 'date',
+        'source_payload' => 'array',
     ];
 
     public function project()

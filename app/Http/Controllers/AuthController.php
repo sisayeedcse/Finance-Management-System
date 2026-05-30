@@ -8,6 +8,7 @@ use App\Services\ActivityService;
 use App\Http\Requests\LoginRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Config;
@@ -121,16 +122,13 @@ class AuthController extends Controller
         $email = $googleUser->getEmail();
         $googleId = $googleUser->getId();
 
-        $member = Member::where('google_email', $email)
-            ->orWhere('email', $email)
-            ->where('status', 'active')
-            ->first();
+        $member = $this->resolveGoogleMember([
+            'email' => $email,
+            'google_uid' => $googleId,
+            'name' => $googleUser->getName() ?: $googleUser->getNickname() ?: $email,
+            'photo' => $googleUser->getAvatar(),
+        ]);
 
-        if (! $member) {
-            return redirect('/?error=not_a_member');
-        }
-
-        $member->update(["google_uid" => $googleId, "google_email" => $email]);
         $token = $member->createToken('sipr-google')->plainTextToken;
 
         $memberData = json_encode([
@@ -176,16 +174,12 @@ class AuthController extends Controller
             return response()->json(['error' => 'Token did not contain email'], 401);
         }
 
-        $member = Member::where('google_email', $email)
-            ->orWhere('email', $email)
-            ->where('status', 'active')
-            ->first();
-
-        if (! $member) {
-            return response()->json(['error' => 'Member not found or inactive'], 401);
-        }
-
-        $member->update(['google_uid' => $googleUid, 'google_email' => $email]);
+        $member = $this->resolveGoogleMember([
+            'email' => $email,
+            'google_uid' => $googleUid,
+            'name' => $data['name'] ?? $data['given_name'] ?? $email,
+            'photo' => $data['picture'] ?? null,
+        ]);
         $token = $member->createToken('sipr-google')->plainTextToken;
         ActivityService::log('google_login', "{$member->name} signed in via Google", $member->id);
 
@@ -198,5 +192,59 @@ class AuthController extends Controller
                 'role' => $member->role,
             ]
         ]);
+    }
+
+    private function resolveGoogleMember(array $profile): Member
+    {
+        $email = $profile['email'] ?? null;
+        $googleUid = $profile['google_uid'] ?? null;
+
+        $member = Member::query()
+            ->where('status', 'active')
+            ->where(function ($query) use ($email, $googleUid) {
+                if ($googleUid) {
+                    $query->where('google_uid', $googleUid);
+                }
+
+                if ($email) {
+                    $query->orWhere('google_email', $email)
+                        ->orWhere('email', $email);
+                }
+            })
+            ->first();
+
+        if ($member) {
+            $member->update([
+                'google_uid' => $googleUid ?: $member->google_uid,
+                'google_email' => $email ?: $member->google_email,
+                'photo' => $profile['photo'] ?? $member->photo,
+                'name' => $member->name ?: ($profile['name'] ?? $member->name),
+            ]);
+
+            return $member;
+        }
+
+        $member = Member::create([
+            'id' => $this->generateMemberId(),
+            'name' => $profile['name'] ?? $email ?? 'Member',
+            'email' => $email ?? sprintf('%s@sipr.local', Str::lower(Str::random(12))),
+            'phone' => null,
+            'title' => 'Member',
+            'role' => 'member',
+            'locked' => false,
+            'status' => 'active',
+            'google_uid' => $googleUid,
+            'google_email' => $email,
+            'photo' => $profile['photo'] ?? null,
+            'monthly_due' => 500,
+            'password' => null,
+        ]);
+
+        return $member;
+    }
+
+    private function generateMemberId(): string
+    {
+        return Str::upper(Str::random(20));
     }
 }

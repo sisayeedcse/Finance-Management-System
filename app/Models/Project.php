@@ -14,6 +14,7 @@ class Project extends Model
         'description',
         'type',
         'status',
+        'source_id',
         'capital',
         'returned',
         'expected',
@@ -23,11 +24,14 @@ class Project extends Model
         'projectManagerId',
         'projectManagerName',
         'teamEntries',
+        'teamMembers',
         'collections',
         'sales',
+        'buyers',
         'projectExpenses',
         'capitalEntries',
         'phases',
+        'partner',
         'amount',
         'capitalDeployed',
         'expectedReturn',
@@ -35,6 +39,7 @@ class Project extends Model
         'sector',
         'date',
         'notes',
+        'source_payload',
     ];
 
     protected $casts = [
@@ -43,11 +48,14 @@ class Project extends Model
         'expected' => 'decimal:2',
         'started_at' => 'date',
         'teamEntries' => 'array',
+        'teamMembers' => 'array',
         'collections' => 'array',
         'sales' => 'array',
+        'buyers' => 'array',
         'projectExpenses' => 'array',
         'capitalEntries' => 'array',
         'phases' => 'array',
+        'source_payload' => 'array',
     ];
 
     public function getAmountAttribute()

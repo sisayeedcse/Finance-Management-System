@@ -10,6 +10,11 @@ class Notice extends Model
     use HasFactory;
 
     protected $fillable = [
-        'type', 'title', 'body', 'posted_by'
+        'source_id', 'type', 'title', 'body', 'pinned', 'posted_by', 'source_payload'
+    ];
+
+    protected $casts = [
+        'pinned' => 'boolean',
+        'source_payload' => 'array',
     ];
 }

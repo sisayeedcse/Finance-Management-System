@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Member;
 use App\Models\PendingRegistration;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Hash;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -103,13 +104,45 @@ class AuthFlowTest extends TestCase
         $this->assertSame($created->id, $pending->member_id);
     }
 
-    public function test_google_sign_in_is_disabled(): void
+    public function test_google_sign_in_issues_a_token_and_links_the_member(): void
     {
-        $response = $this->get('/auth/google/redirect');
+        Member::create([
+            'id' => 'SIPR26-GG-0001',
+            'name' => 'Imported Member',
+            'email' => 'member@example.com',
+            'role' => 'member',
+            'status' => 'active',
+            'password' => null,
+        ]);
 
-        // With Socialite enabled we expect a redirect to Google's OAuth endpoint (302)
-        $response->assertStatus(302);
-        $location = $response->headers->get('Location');
-        $this->assertStringContainsString('accounts.google.com', (string) $location);
+        Http::fake([
+            'https://oauth2.googleapis.com/tokeninfo*' => Http::response([
+                'email' => 'member@example.com',
+                'sub' => 'google-sub-123',
+                'name' => 'Imported Member',
+                'picture' => 'https://example.com/photo.jpg',
+            ], 200),
+        ]);
+
+        $response = $this->postJson('/api/auth/google', [
+            'id_token' => 'fake-token',
+        ]);
+
+        $response->assertOk()
+            ->assertJsonStructure([
+                'token',
+                'member' => [
+                    'id',
+                    'name',
+                    'email',
+                    'role',
+                ],
+            ]);
+
+        $this->assertDatabaseHas('members', [
+            'email' => 'member@example.com',
+            'google_uid' => 'google-sub-123',
+            'google_email' => 'member@example.com',
+        ]);
     }
 }

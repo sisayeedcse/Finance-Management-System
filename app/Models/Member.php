@@ -18,7 +18,9 @@ class Member extends AuthUser
     protected $fillable = [
         'id', 'name', 'email', 'phone', 'title', 'role',
         'locked', 'status', 'google_uid', 'google_email',
-        'monthly_due', 'password', 'photo',
+        'monthly_due', 'password', 'photo', 'gmail', 'wa_link',
+        'address', 'emoji', 'permissions', 'registered_at',
+        'restored_at', 'source_payload',
     ];
 
     protected $hidden = ['password', 'remember_token'];
@@ -27,6 +29,10 @@ class Member extends AuthUser
         'locked' => 'boolean',
         'monthly_due' => 'decimal:2',
         'password' => 'hashed',
+        'permissions' => 'array',
+        'registered_at' => 'datetime',
+        'restored_at' => 'datetime',
+        'source_payload' => 'array',
     ];
 
     public function transactions()
