@@ -1892,7 +1892,9 @@
                 deletePayment: (id) => apiCall(`/payments/${id}`, "DELETE"),
                 exportPaymentCsv: (month, year) => {
                     var url = `${API_BASE}/payments/export/csv?month=${month}&year=${year}`;
-                    return AUTH_TOKEN ? url + `&token=${encodeURIComponent(AUTH_TOKEN)}` : url;
+                    return AUTH_TOKEN
+                        ? url + `&token=${encodeURIComponent(AUTH_TOKEN)}`
+                        : url;
                 },
 
                 // Projects
@@ -1964,17 +1966,27 @@
                 // PDF Exports
                 exportPaymentPdf: (month, year) => {
                     var url = `${API_BASE}/payments/export/pdf?month=${month}&year=${year}`;
-                    return AUTH_TOKEN ? url + `&token=${encodeURIComponent(AUTH_TOKEN)}` : url;
+                    return AUTH_TOKEN
+                        ? url + `&token=${encodeURIComponent(AUTH_TOKEN)}`
+                        : url;
                 },
                 exportWalletPdf: (memberId) => {
                     var url = `${API_BASE}/members/${memberId}/passbook/pdf`;
-                    return AUTH_TOKEN ? url + `?token=${encodeURIComponent(AUTH_TOKEN)}` : url;
+                    return AUTH_TOKEN
+                        ? url + `?token=${encodeURIComponent(AUTH_TOKEN)}`
+                        : url;
                 },
 
                 // Registration Requests
                 createPendingRegistration: (data) =>
                     apiCall("/register-request", "POST", data),
             };
+
+            // Legacy shims for older global callers
+            if (typeof createDocument === "undefined") {
+                window.createDocument = (...args) =>
+                    API.createDocument(...args);
+            }
 
             // ═══════════ CONSTANTS ═══════════
             var DM = [
