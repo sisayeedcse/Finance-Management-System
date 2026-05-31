@@ -1240,7 +1240,11 @@
                             height: 100%;
                             width: 0%;
                             border-radius: 99px;
-                            background: linear-gradient(90deg, #4d9fff, #a78bfa);
+                            background: linear-gradient(
+                                90deg,
+                                #4d9fff,
+                                #a78bfa
+                            );
                             transition: width 0.08s linear;
                         "
                     ></div>
@@ -1886,8 +1890,10 @@
                     apiCall(`/payments?month=${month}&year=${year}`),
                 createPayment: (data) => apiCall("/payments", "POST", data),
                 deletePayment: (id) => apiCall(`/payments/${id}`, "DELETE"),
-                exportPaymentCsv: (month, year) =>
-                    `${API_BASE}/payments/export/csv?month=${month}&year=${year}`,
+                exportPaymentCsv: (month, year) => {
+                    var url = `${API_BASE}/payments/export/csv?month=${month}&year=${year}`;
+                    return AUTH_TOKEN ? url + `&token=${encodeURIComponent(AUTH_TOKEN)}` : url;
+                },
 
                 // Projects
                 getProjects: () => apiCall("/projects"),
@@ -1956,10 +1962,14 @@
                     apiCall("/auth/google", "POST", { id_token: token }),
 
                 // PDF Exports
-                exportPaymentPdf: (month, year) =>
-                    `${API_BASE}/payments/export/pdf?month=${month}&year=${year}`,
-                exportWalletPdf: (memberId) =>
-                    `${API_BASE}/members/${memberId}/passbook/pdf`,
+                exportPaymentPdf: (month, year) => {
+                    var url = `${API_BASE}/payments/export/pdf?month=${month}&year=${year}`;
+                    return AUTH_TOKEN ? url + `&token=${encodeURIComponent(AUTH_TOKEN)}` : url;
+                },
+                exportWalletPdf: (memberId) => {
+                    var url = `${API_BASE}/members/${memberId}/passbook/pdf`;
+                    return AUTH_TOKEN ? url + `?token=${encodeURIComponent(AUTH_TOKEN)}` : url;
+                },
 
                 // Registration Requests
                 createPendingRegistration: (data) =>
@@ -9042,10 +9052,18 @@
                 };
                 if (!locked && $("tl-" + sid))
                     upd.title = $("tl-" + sid).value.trim() || mem.title;
-                db.collection("members")
-                    .doc(mid)
-                    .update(upd)
-                    .then(function () {
+                // Replace legacy Firebase update with REST API call
+                API.updateMember(mid, upd)
+                    .then(function (res) {
+                        // API returns error shape on failure
+                        if (!res || res.error) {
+                            toast(
+                                (res && (res.message || res.body)) ||
+                                    "Save failed",
+                                false,
+                            );
+                            return;
+                        }
                         Object.assign(mem, upd);
                         if (mem.email === S.email) {
                             S.name = nm;
@@ -9057,7 +9075,7 @@
                         toast("Saved! Permissions updated for " + nm);
                     })
                     .catch(function (e) {
-                        toast(e.message, false);
+                        toast((e && e.message) || "Save failed", false);
                     });
             }
 
@@ -9144,19 +9162,45 @@
             }
 
             // Demo-compatible render aliases
-            function renderDashboard() { return pDash(); }
-            function renderFinance() { return pFinance(); }
-            function renderTransactions() { return pFinance(); }
-            function renderProjects() { return pInv(); }
-            function renderMembers() { return pMem(); }
-            function renderWallet() { return pWallet(); }
-            function renderGoals() { return pGoals(); }
-            function renderNoticeBoard() { return pNotice(); }
-            function renderActivityLog() { return pActivity(); }
-            function renderAbout() { return pAbout(); }
-            function renderDocuments() { return pDocs(); }
-            function renderExpenses() { return pExpenses(); }
-            function renderControlPanel() { return pControl(); }
+            function renderDashboard() {
+                return pDash();
+            }
+            function renderFinance() {
+                return pFinance();
+            }
+            function renderTransactions() {
+                return pFinance();
+            }
+            function renderProjects() {
+                return pInv();
+            }
+            function renderMembers() {
+                return pMem();
+            }
+            function renderWallet() {
+                return pWallet();
+            }
+            function renderGoals() {
+                return pGoals();
+            }
+            function renderNoticeBoard() {
+                return pNotice();
+            }
+            function renderActivityLog() {
+                return pActivity();
+            }
+            function renderAbout() {
+                return pAbout();
+            }
+            function renderDocuments() {
+                return pDocs();
+            }
+            function renderExpenses() {
+                return pExpenses();
+            }
+            function renderControlPanel() {
+                return pControl();
+            }
 
             // Close profile on outside click
             document.addEventListener("click", function (e) {

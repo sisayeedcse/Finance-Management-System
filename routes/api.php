@@ -23,6 +23,12 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/auth/google', [AuthController::class, 'googleLogin'])->name('auth.google');
 Route::post('/register-request', [AuthController::class, 'requestRegistration']);
 
+// Token-friendly download routes (accept ?token= or Authorization: Bearer <token>)
+Route::get('/payments/export/csv', [PaymentController::class, 'exportCsv'])->middleware(\App\Http\Middleware\AuthenticateDownload::class);
+Route::get('/payments/export/pdf', [PaymentController::class, 'exportPdf'])->middleware(\App\Http\Middleware\AuthenticateDownload::class);
+Route::get('/members/{id}/passbook/pdf', [WalletController::class, 'passpdf'])->middleware(\App\Http\Middleware\AuthenticateDownload::class);
+Route::get('/documents/{id}/download', [DocumentController::class, 'download'])->middleware(\App\Http\Middleware\AuthenticateDownload::class);
+
 Route::middleware('auth:sanctum')->group(function () {
 
     // Auth
@@ -39,7 +45,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/members/{id}/link-google', [MemberController::class, 'linkGoogle']);
     Route::get('/members/{id}/wallet', [WalletController::class, 'show']);
     Route::get('/members/{id}/passbook', [WalletController::class, 'passbook']);
-    Route::get('/members/{id}/passbook/pdf', [WalletController::class, 'passpdf']);
 
     // Transactions (read)
     Route::get('/transactions', [TransactionController::class, 'index']);
@@ -66,7 +71,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Documents
     Route::get('/documents', [DocumentController::class, 'index']);
-    Route::get('/documents/{id}/download', [DocumentController::class, 'download']);
 
     // Goals
     Route::get('/goals', [GoalController::class, 'index']);
@@ -86,8 +90,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::post('/payments', [PaymentController::class, 'store']);
         Route::delete('/payments/{id}', [PaymentController::class, 'destroy']);
-        Route::get('/payments/export/csv', [PaymentController::class, 'exportCsv']);
-        Route::get('/payments/export/pdf', [PaymentController::class, 'exportPdf']);
+        Route::get('/payments/whatsapp', [PaymentController::class, 'whatsappText']);
         Route::get('/payments/whatsapp', [PaymentController::class, 'whatsappText']);
 
         Route::post('/expenses', [ExpenseController::class, 'store']);
