@@ -110,7 +110,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/pending-registrations', [ControlPanelController::class, 'pendingRegistrations']);
         Route::post('/registrations/{id}/approve', [ControlPanelController::class, 'approve']);
         Route::post('/registrations/{id}/reject', [ControlPanelController::class, 'reject']);
-        Route::delete('/registrations/{id}', [ControlPanelController::class, 'destroy']);
 
         // Member management
         Route::post('/members', [MemberController::class, 'store']);
