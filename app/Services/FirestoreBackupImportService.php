@@ -46,6 +46,12 @@ class FirestoreBackupImportService
             return $relativePath;
         }
 
+        $parentPath = base_path('..'.DIRECTORY_SEPARATOR.ltrim(str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $path), DIRECTORY_SEPARATOR));
+
+        if (File::exists($parentPath)) {
+            return $parentPath;
+        }
+
         throw new \InvalidArgumentException("Firestore backup not found at {$path}");
     }
 
