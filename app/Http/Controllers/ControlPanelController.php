@@ -88,4 +88,18 @@ class ControlPanelController extends Controller
 
         return response()->json(['message' => 'Rejected']);
     }
+
+    public function destroy(string $id, Request $request)
+    {
+        $registration = PendingRegistration::findOrFail($id);
+
+        if ($registration->status === 'approved') {
+            return response()->json(['error' => 'Approved registrations cannot be deleted'], 422);
+        }
+
+        ActivityService::log('delete_registration', "Deleted {$registration->name}", $request->user()->id);
+        $registration->delete();
+
+        return response()->json(['message' => 'Deleted']);
+    }
 }

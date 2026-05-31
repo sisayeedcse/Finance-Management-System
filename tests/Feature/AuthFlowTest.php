@@ -104,6 +104,39 @@ class AuthFlowTest extends TestCase
         $this->assertSame($created->id, $pending->member_id);
     }
 
+    public function test_admin_can_delete_a_pending_registration(): void
+    {
+        $admin = Member::create([
+            'id' => 'SIPR26-AD-0002',
+            'name' => 'Admin User',
+            'email' => 'admin2@example.com',
+            'role' => 'admin',
+            'status' => 'active',
+            'password' => Hash::make('admin-secret'),
+        ]);
+
+        $pending = PendingRegistration::create([
+            'name' => 'Delete Me',
+            'email' => 'delete@example.com',
+            'phone' => '01700000002',
+            'invite_code' => 'INV-00002',
+            'password' => Hash::make('member-secret'),
+            'status' => 'pending',
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $response = $this->deleteJson('/api/registrations/' . $pending->id);
+
+        $response->assertOk()->assertJson([
+            'message' => 'Deleted',
+        ]);
+
+        $this->assertDatabaseMissing('pending_registrations', [
+            'email' => 'delete@example.com',
+        ]);
+    }
+
     public function test_google_sign_in_issues_a_token_and_links_the_member(): void
     {
         Member::create([
