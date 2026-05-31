@@ -19,6 +19,9 @@ use App\Http\Controllers\WalletController;
 use App\Http\Controllers\ProposalController;
 
 // Public routes
+// Minimal named login route to satisfy Redirect behavior in auth middleware
+Route::get('/login', function () { return response()->json(['message' => 'login'], 401); })->name('login');
+
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/auth/google', [AuthController::class, 'googleLogin'])->name('auth.google');
 Route::post('/register-request', [AuthController::class, 'requestRegistration']);
