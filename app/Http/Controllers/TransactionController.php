@@ -12,17 +12,33 @@ class TransactionController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Transaction::query();
+        $query = Transaction::with('member:id,name');
 
-        if ($request->has('member_id')) {
+        if ($request->filled('member_id') && $request->member_id !== 'all') {
             $query->where('member_id', $request->member_id);
         }
 
-        if ($request->has('type')) {
+        if ($request->filled('type') && $request->type !== 'all') {
             $query->where('type', $request->type);
         }
 
-        return response()->json(['data' => $query->orderByDesc('date')->get()]);
+        $txs = $query->orderByDesc('date')
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(function ($t) {
+                return [
+                    'id' => $t->id,
+                    'type' => $t->type,
+                    'member_id' => $t->member_id,
+                    'member_name' => $t->member?->name ?? $t->member_id,
+                    'amount' => $t->amount,
+                    'date' => $t->date,
+                    'note' => $t->note,
+                    'created_at' => $t->created_at,
+                ];
+            });
+
+        return response()->json($txs);
     }
 
     public function store(StoreTransactionRequest $request)

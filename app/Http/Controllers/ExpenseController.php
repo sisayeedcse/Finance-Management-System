@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Expense;
+use App\Models\Member;
 use App\Services\ActivityService;
 use App\Http\Requests\StoreExpenseRequest;
 use Illuminate\Http\Request;
@@ -11,7 +12,19 @@ class ExpenseController extends Controller
 {
     public function index()
     {
-        return response()->json(['data' => Expense::orderByDesc('expense_date')->get()]);
+        $memberNames = Member::pluck('name', 'id');
+
+        $expenses = Expense::orderByDesc('expense_date')
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(function ($expense) use ($memberNames) {
+                $row = $expense->toArray();
+                $row['recorded_by_name'] = $memberNames[$expense->recorded_by] ?? $expense->recorded_by;
+
+                return $row;
+            });
+
+        return response()->json($expenses);
     }
 
     public function store(StoreExpenseRequest $request)

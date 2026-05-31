@@ -14,7 +14,9 @@ class MemberController extends Controller
 {
     public function index()
     {
-        $members = Member::where('status', 'active')->get();
+        $members = Member::where('status', 'active')
+            ->orderByRaw("FIELD(role,'admin','finance','secretary','member')")
+            ->get(['id', 'name', 'title', 'role']);
         return response()->json(['data' => $members]);
     }
 

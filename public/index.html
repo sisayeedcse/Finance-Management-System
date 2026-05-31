@@ -1774,7 +1774,10 @@
         <script>
             // ═══════════ LARAVEL SANCTUM API CLIENT ═══════════
             const API_BASE = window.location.origin + "/api";
-            let AUTH_TOKEN = localStorage.getItem("auth_token") || null;
+            let AUTH_TOKEN =
+                localStorage.getItem("auth_token") ||
+                localStorage.getItem("sipr_token") ||
+                null;
             function safeParseCurrentUser(value) {
                 if (!value || value === "undefined" || value === "null")
                     return null;
@@ -1785,9 +1788,9 @@
                     return null;
                 }
             }
-            let CURRENT_USER = safeParseCurrentUser(
-                localStorage.getItem("current_user"),
-            );
+            let CURRENT_USER =
+                safeParseCurrentUser(localStorage.getItem("current_user")) ||
+                safeParseCurrentUser(localStorage.getItem("sipr_member"));
 
             // Make authenticated API calls
             async function apiCall(endpoint, method = "GET", data = null) {
@@ -1814,7 +1817,9 @@
                     if (res.status === 401) {
                         AUTH_TOKEN = null;
                         localStorage.removeItem("auth_token");
+                        localStorage.removeItem("sipr_token");
                         localStorage.removeItem("current_user");
+                        localStorage.removeItem("sipr_member");
                         window.location.href = "/";
                         return null;
                     }
@@ -2488,13 +2493,19 @@
                 AUTH_TOKEN = res.token;
                 CURRENT_USER = res.member || res.user || null;
                 localStorage.setItem("auth_token", AUTH_TOKEN);
+                localStorage.setItem("sipr_token", AUTH_TOKEN);
                 if (CURRENT_USER) {
                     localStorage.setItem(
                         "current_user",
                         JSON.stringify(CURRENT_USER),
                     );
+                    localStorage.setItem(
+                        "sipr_member",
+                        JSON.stringify(CURRENT_USER),
+                    );
                 } else {
                     localStorage.removeItem("current_user");
+                    localStorage.removeItem("sipr_member");
                 }
 
                 // Set UI state
@@ -2685,7 +2696,9 @@
                 AUTH_TOKEN = null;
                 CURRENT_USER = null;
                 localStorage.removeItem("auth_token");
+                localStorage.removeItem("sipr_token");
                 localStorage.removeItem("current_user");
+                localStorage.removeItem("sipr_member");
                 S.email = "";
                 S.name = "";
                 S.role = "member";
@@ -2810,13 +2823,19 @@
                     AUTH_TOKEN = token;
                     CURRENT_USER = user;
                     localStorage.setItem("auth_token", AUTH_TOKEN);
+                    localStorage.setItem("sipr_token", AUTH_TOKEN);
                     if (CURRENT_USER) {
                         localStorage.setItem(
                             "current_user",
                             JSON.stringify(CURRENT_USER),
                         );
+                        localStorage.setItem(
+                            "sipr_member",
+                            JSON.stringify(CURRENT_USER),
+                        );
                     } else {
                         localStorage.removeItem("current_user");
+                        localStorage.removeItem("sipr_member");
                     }
                     // Clear URL and reload
                     window.history.replaceState(
@@ -9123,6 +9142,21 @@
                     }
                 })();
             }
+
+            // Demo-compatible render aliases
+            function renderDashboard() { return pDash(); }
+            function renderFinance() { return pFinance(); }
+            function renderTransactions() { return pFinance(); }
+            function renderProjects() { return pInv(); }
+            function renderMembers() { return pMem(); }
+            function renderWallet() { return pWallet(); }
+            function renderGoals() { return pGoals(); }
+            function renderNoticeBoard() { return pNotice(); }
+            function renderActivityLog() { return pActivity(); }
+            function renderAbout() { return pAbout(); }
+            function renderDocuments() { return pDocs(); }
+            function renderExpenses() { return pExpenses(); }
+            function renderControlPanel() { return pControl(); }
 
             // Close profile on outside click
             document.addEventListener("click", function (e) {

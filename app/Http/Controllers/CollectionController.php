@@ -11,8 +11,17 @@ class CollectionController extends Controller
 {
     public function index(string $projectId)
     {
-        $collections = ProjectCollection::where('project_id', $projectId)->orderByDesc('collected_at')->get();
-        return response()->json(['data' => $collections]);
+        $collections = ProjectCollection::where('project_id', $projectId)
+            ->orderByDesc('collected_at')
+            ->get();
+
+        return response()->json([
+            'total_kg' => $collections->sum('collected_kg'),
+            'sold_kg' => $collections->sum('sold_kg'),
+            'in_stock_kg' => $collections->sum('collected_kg') - $collections->sum('sold_kg'),
+            'revenue' => $collections->sum('revenue'),
+            'records' => $collections,
+        ]);
     }
 
     public function store(string $projectId, Request $request)

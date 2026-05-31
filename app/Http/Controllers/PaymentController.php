@@ -16,11 +16,39 @@ class PaymentController extends Controller
         $month = $request->get('month', now()->month);
         $year = $request->get('year', now()->year);
 
-        $payments = Payment::where('month', $month)->where('year', $year)->get();
+        $members = Member::where('status', 'active')->get();
+        $payments = Payment::where('month', $month)
+            ->where('year', $year)
+            ->get()
+            ->keyBy('member_id');
+
+        $list = $members->map(function ($m) use ($payments) {
+            $p = $payments[$m->id] ?? null;
+
+            return [
+                'member_id' => $m->id,
+                'name' => $m->name,
+                'status' => $p?->status ?? 'pending',
+                'amount_due' => $m->monthly_due,
+                'amount' => $p?->amount ?? 0,
+                'paid_at' => $p?->paid_at,
+                'payment_id' => $p?->id,
+            ];
+        })->values();
+
+        $paidCount = $payments->where('status', 'paid')->count();
+        $totalDue = $members->sum('monthly_due');
+        $collected = $payments->where('status', 'paid')->sum('amount');
+
         return response()->json([
-            'month' => $month,
-            'year' => $year,
-            'payments' => $payments,
+            'list' => $list,
+            'paid_count' => $paidCount,
+            'pending_count' => $members->count() - $paidCount,
+            'total' => $members->count(),
+            'collected' => $collected,
+            'rate' => $totalDue > 0 ? round(($collected / $totalDue) * 100) : 0,
+            'month' => (int) $month,
+            'year' => (int) $year,
         ]);
     }
 

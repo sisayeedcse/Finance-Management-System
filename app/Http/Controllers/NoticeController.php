@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Notice;
+use App\Models\Member;
 use App\Services\ActivityService;
 use App\Http\Requests\StoreNoticeRequest;
 use Illuminate\Http\Request;
@@ -12,7 +13,19 @@ class NoticeController extends Controller
     public function index(Request $request)
     {
         $type = $request->get('type', 'announcement');
-        return response()->json(['data' => Notice::where('type', $type)->orderByDesc('created_at')->get()]);
+        $memberNames = Member::pluck('name', 'id');
+
+        $notices = Notice::where('type', $type)
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(function ($notice) use ($memberNames) {
+                $row = $notice->toArray();
+                $row['posted_by_name'] = $memberNames[$notice->posted_by] ?? $notice->posted_by;
+
+                return $row;
+            });
+
+        return response()->json($notices);
     }
 
     public function store(StoreNoticeRequest $request)
