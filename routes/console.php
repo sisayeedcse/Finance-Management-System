@@ -148,6 +148,20 @@ Artisan::command('sipr:verify-backup {path?}', function () {
 
     $this->info('Verification report:');
 
+    // Special-case members: compare unique emails instead of raw row count
+    $sqlMemberEmails = [];
+    if (preg_match('/INSERT INTO `members` \([^)]+\) VALUES\s*(.*);/is', $sql, $m)) {
+        $vals = $m[1];
+        if (preg_match_all("/\(\s*'([^']*)'\s*,\s*'([^']*)'\s*,\s*'([^']*)'/", $vals, $mems, PREG_SET_ORDER)) {
+            foreach ($mems as $r) {
+                $email = strtolower(trim($r[3]));
+                if ($email !== '') $sqlMemberEmails[] = $email;
+            }
+        }
+    }
+
+    $sqlUniqueMemberCount = count(array_unique($sqlMemberEmails));
+
     foreach ($tablesToCheck as $table) {
         $dbCount = 0;
 
@@ -157,12 +171,33 @@ Artisan::command('sipr:verify-backup {path?}', function () {
             $this->comment("Table {$table} not accessible: {$e->getMessage()}");
             continue;
         }
-
-        $this->line(sprintf("- %s: SQL=%d  DB=%d %s", $table, $sqlCounts[$table] ?? 0, $dbCount, ($sqlCounts[$table] === $dbCount) ? '[OK]' : '[MISMATCH]'));
+        if ($table === 'members') {
+            $this->line(sprintf("- %s: SQL(unique emails)=%d  DB=%d %s", $table, $sqlUniqueMemberCount, $dbCount, ($sqlUniqueMemberCount === $dbCount) ? '[OK]' : '[MISMATCH]'));
+        } else {
+            $this->line(sprintf("- %s: SQL=%d  DB=%d %s", $table, $sqlCounts[$table] ?? 0, $dbCount, ($sqlCounts[$table] === $dbCount) ? '[OK]' : '[MISMATCH]'));
+        }
     }
 
     // Summary suggestions
-    $mismatches = array_filter($tablesToCheck, fn($t) => ($sqlCounts[$t] ?? 0) !== @DB::table($t)->count());
+    $mismatches = [];
+
+    foreach ($tablesToCheck as $t) {
+        try {
+            $dbCount = DB::table($t)->count();
+        } catch (\Throwable $e) {
+            continue;
+        }
+
+        if ($t === 'members') {
+            if ($sqlUniqueMemberCount !== $dbCount) {
+                $mismatches[] = $t;
+            }
+        } else {
+            if (($sqlCounts[$t] ?? 0) !== $dbCount) {
+                $mismatches[] = $t;
+            }
+        }
+    }
 
     if (count($mismatches) === 0) {
         $this->info('All table counts match the SQL backup.');
