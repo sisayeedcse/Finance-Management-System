@@ -9,7 +9,7 @@ class ActivityLogController extends Controller
 {
     public function index()
     {
-        return response()->json(['data' => ActivityLog::orderByDesc('created_at')->limit(100)->get()]);
+        return response()->json(['data' => ActivityLog::orderByDesc('id')->limit(100)->get()]);
     }
 
     public function store(Request $request)
@@ -22,7 +22,8 @@ class ActivityLogController extends Controller
         $log = ActivityLog::create([
             'action' => $request->action,
             'description' => $request->description ?? null,
-            'member_id' => $request->user() ? $request->user()->id : null,
+            'performed_by' => $request->user() ? $request->user()->id : null,
+            'performed_by_name' => $request->user() ? $request->user()->name : 'Unknown',
             'created_at' => now(),
         ]);
 

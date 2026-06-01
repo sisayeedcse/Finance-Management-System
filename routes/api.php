@@ -77,6 +77,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Goals
     Route::get('/goals', [GoalController::class, 'index']);
+    Route::post('/goals', [GoalController::class, 'store']);
+    Route::put('/goals/{id}', [GoalController::class, 'update']);
+    Route::delete('/goals/{id}', [GoalController::class, 'destroy']);
 
     // Activity Log
     Route::get('/activity-log', [ActivityLogController::class, 'index']);

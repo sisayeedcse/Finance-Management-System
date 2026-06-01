@@ -16,7 +16,7 @@ class MemberController extends Controller
     {
         $members = Member::where('status', 'active')
             ->orderByRaw("FIELD(role,'admin','finance','secretary','member')")
-            ->get(['id', 'name', 'title', 'role']);
+            ->get(['id', 'name', 'title', 'role', 'email', 'google_email', 'phone', 'photo', 'address', 'monthly_due', 'google_uid', 'locked']);
         return response()->json(['data' => $members]);
     }
 

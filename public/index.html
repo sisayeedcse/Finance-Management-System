@@ -313,14 +313,30 @@
                 background: var(--bor);
             }
             .err {
-                color: var(--orange);
-                font-size: 12px;
-                padding: 10px 13px;
-                background: #1a060688;
-                border-radius: 8px;
-                border: 1px solid #7f1d1d;
+                color: #fca5a5;
+                font-size: 13px;
+                font-weight: 600;
+                padding: 12px 15px;
+                background: linear-gradient(135deg,#200a0a,#2d0f0f);
+                border-radius: 12px;
+                border: 1px solid #ef444444;
                 margin-top: 10px;
                 display: none;
+                line-height: 1.5;
+                animation: errShake .3s ease;
+            }
+            @keyframes errShake {
+                0%,100% { transform: translateX(0); }
+                20%      { transform: translateX(-4px); }
+                60%      { transform: translateX(4px); }
+            }
+            @keyframes fadeIn {
+                from { opacity:0; }
+                to   { opacity:1; }
+            }
+            @keyframes slideUp {
+                from { opacity:0; transform:translateY(30px) scale(.95); }
+                to   { opacity:1; transform:translateY(0) scale(1); }
             }
             /* APP */
             #pg-app {
@@ -704,7 +720,7 @@
                 background: var(--sur);
                 border: 1px solid var(--bor);
                 border-radius: 18px;
-                overflow: hidden;
+                overflow: visible;
                 cursor: pointer;
                 transition:
                     border-color 0.2s,
@@ -1903,12 +1919,16 @@
                 createProject: (data) => apiCall("/projects", "POST", data),
                 updateProject: (id, data) =>
                     apiCall(`/projects/${id}`, "PUT", data),
+                deleteProject: (id) =>
+                    apiCall(`/projects/${id}`, "DELETE"),
 
                 // Collections
                 getCollections: (projectId) =>
                     apiCall(`/projects/${projectId}/collections`),
                 createCollection: (data) =>
                     apiCall("/collections", "POST", data),
+                deleteCollection: (id) =>
+                    apiCall(`/collections/${id}`, "DELETE"),
 
                 // Notices/Announcements
                 getNotices: (type = "announcement") =>
@@ -1933,6 +1953,9 @@
 
                 // Goals
                 getGoals: () => apiCall("/goals"),
+                createGoal: (data) => apiCall("/goals", "POST", data),
+                updateGoal: (id, data) => apiCall(`/goals/${id}`, "PUT", data),
+                deleteGoal: (id) => apiCall(`/goals/${id}`, "DELETE"),
 
                 // Wallet
                 getWallet: (memberId) => apiCall(`/members/${memberId}/wallet`),
@@ -2182,6 +2205,7 @@
                 txs: [],
                 invs: [],
                 wallets: [],
+                goals: [],
                 tab: "dashboard",
                 activeProj: null,
                 projTab: "overview",
@@ -2344,21 +2368,164 @@
                     "</span>"
                 );
             }
+            // ═══════════ NOTIFICATION SYSTEM ═══════════
+            var _tt, _toastQ = [];
+
+            // Map raw server/error strings to friendly messages
+            var ERR_MAP = {
+                'not_linked':           { icon: '🔗', title: 'Google Account Not Linked', msg: 'This Google account is not connected to any SIPR member. Please try a different account or contact the admin.', cta: 'Contact Admin' },
+                'not_found':            { icon: '👤', title: 'Account Not Found', msg: 'We couldn\'t find a SIPR account matching these credentials. Double-check your email or ask the admin to create your account.', cta: null },
+                'unauthorized':         { icon: '🔒', title: 'Access Denied', msg: 'You don\'t have permission to do that. If you think this is a mistake, contact the group admin.', cta: null },
+                'wrong_password':       { icon: '🔑', title: 'Incorrect Password', msg: 'The password you entered doesn\'t match our records. Try again or use the forgot password option.', cta: null },
+                'invalid_credentials':  { icon: '🔑', title: 'Invalid Credentials', msg: 'Your email or password is incorrect. Please check and try again.', cta: null },
+                'email_taken':          { icon: '📧', title: 'Email Already Exists', msg: 'An account with this email already exists in the system.', cta: null },
+                'google_cancelled':     { icon: '❌', title: 'Sign-In Cancelled', msg: 'Google sign-in was cancelled. Click the button below to try again.', cta: null },
+                'server_error':         { icon: '⚡', title: 'Something Went Wrong', msg: 'Our server hit a snag. This is on us — please try again in a moment.', cta: null },
+            };
+
+            function getErrInfo(raw) {
+                if (!raw) return null;
+                var r = String(raw).toLowerCase();
+                if (r.includes('not_linked') || r.includes('not linked') || r.includes('no member') || r.includes('no sipr')) return ERR_MAP.not_linked;
+                if (r.includes('not found') || r.includes('no account')) return ERR_MAP.not_found;
+                if (r.includes('wrong password') || r.includes('incorrect password')) return ERR_MAP.wrong_password;
+                if (r.includes('invalid credentials') || r.includes('invalid email or password') || r.includes('these credentials')) return ERR_MAP.invalid_credentials;
+                if (r.includes('email') && (r.includes('taken') || r.includes('exists') || r.includes('already'))) return ERR_MAP.email_taken;
+                if (r.includes('cancelled') || r.includes('canceled') || r.includes('access_denied')) return ERR_MAP.google_cancelled;
+                if (r.includes('500') || r.includes('server') || r.includes('exception')) return ERR_MAP.server_error;
+                if (r.includes('unauthorized') || r.includes('forbidden') || r.includes('403')) return ERR_MAP.unauthorized;
+                return null;
+            }
+
+            // Full-screen modal alert for critical errors
+            function showAlert(errKey, rawMsg) {
+                var info = (typeof errKey === 'string' && ERR_MAP[errKey]) ? ERR_MAP[errKey] : (getErrInfo(errKey || rawMsg) || getErrInfo(rawMsg));
+                var icon  = info ? info.icon  : '⚠️';
+                var title = info ? info.title : 'Something Went Wrong';
+                var msg   = info ? info.msg   : (rawMsg || 'An unexpected error occurred. Please try again.');
+                var cta   = info ? info.cta   : null;
+
+                var overlay = document.createElement('div');
+                overlay.id = 'sipr-alert-overlay';
+                overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);animation:fadeIn .2s ease';
+
+                overlay.innerHTML =
+                    '<div style="background:linear-gradient(145deg,#0d1424,#1a0e1a);border:1px solid #ef444455;border-radius:24px;padding:36px 32px;max-width:420px;width:90%;text-align:center;box-shadow:0 24px 80px #00000088;animation:slideUp .25s cubic-bezier(.34,1.56,.64,1)">' +
+                    '<div style="font-size:52px;margin-bottom:16px;line-height:1">' + icon + '</div>' +
+                    '<div style="font-size:18px;font-weight:900;color:#fff;margin-bottom:10px;letter-spacing:-.3px">' + title + '</div>' +
+                    '<div style="font-size:14px;color:#94a3b8;line-height:1.65;margin-bottom:24px">' + msg + '</div>' +
+                    '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">' +
+                    (cta === 'Contact Admin' ? '<a href="mailto:admin@sipr.com" style="padding:10px 20px;border-radius:12px;background:linear-gradient(135deg,#1e3a5f,#1a4080);border:1px solid #3b82f655;color:#60a5fa;font-size:13px;font-weight:700;text-decoration:none">📧 Email Admin</a>' : '') +
+                    '<button onclick="document.getElementById(\'sipr-alert-overlay\').remove()" style="padding:10px 28px;border-radius:12px;background:linear-gradient(135deg,#0f172a,#1e293b);border:1px solid #334155;color:#e2e8f0;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Got it</button>' +
+                    '</div>' +
+                    '<div style="margin-top:16px;font-size:11px;color:#475569">SIPR Group · Invest. Grow. Prosper.</div>' +
+                    '</div>';
+
+                // Close on backdrop click
+                overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+                document.body.appendChild(overlay);
+            }
+
+            // ═══════════ STYLED CONFIRM DIALOG ═══════════
+            function confirmDialog(opts) {
+                // opts: { icon, title, message, confirmText, confirmColor, cancelText }
+                return new Promise(function(resolve) {
+                    var icon        = opts.icon        || '⚠️';
+                    var title       = opts.title       || 'Are you sure?';
+                    var message     = opts.message     || '';
+                    var confirmText = opts.confirmText || 'Confirm';
+                    var confirmClr  = opts.confirmColor|| '#ef4444';
+                    var cancelText  = opts.cancelText  || 'Cancel';
+
+                    var overlay = document.createElement('div');
+                    overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.72);backdrop-filter:blur(8px);animation:fadeIn .15s ease';
+
+                    overlay.innerHTML =
+                        '<div style="background:linear-gradient(145deg,#0d1424,#1a1228);border:1px solid #ef444433;border-radius:22px;padding:32px 28px;max-width:380px;width:90%;text-align:center;box-shadow:0 24px 80px #00000099;animation:slideUp .22s cubic-bezier(.34,1.56,.64,1)">' +
+                        '<div style="font-size:44px;margin-bottom:14px;line-height:1">' + icon + '</div>' +
+                        '<div style="font-size:17px;font-weight:900;color:#fff;margin-bottom:10px;letter-spacing:-.2px">' + title + '</div>' +
+                        (message ? '<div style="font-size:13px;color:#94a3b8;line-height:1.65;margin-bottom:22px">' + message + '</div>' : '<div style="margin-bottom:22px"></div>') +
+                        '<div style="display:flex;gap:10px;justify-content:center">' +
+                        '<button id="cdlg-cancel" style="flex:1;padding:11px 16px;border-radius:12px;background:#1e293b;border:1px solid #334155;color:#94a3b8;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:background .15s">' + cancelText + '</button>' +
+                        '<button id="cdlg-ok" style="flex:1;padding:11px 16px;border-radius:12px;background:' + confirmClr + '22;border:1px solid ' + confirmClr + '66;color:' + confirmClr + ';font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:background .15s">' + confirmText + '</button>' +
+                        '</div>' +
+                        '<div style="margin-top:14px;font-size:10px;color:#334155">SIPR Group · Invest. Grow. Prosper.</div>' +
+                        '</div>';
+
+                    function close(result) {
+                        overlay.style.opacity = '0';
+                        overlay.style.transition = 'opacity .15s';
+                        setTimeout(function() { overlay.remove(); }, 150);
+                        resolve(result);
+                    }
+
+                    overlay.addEventListener('click', function(e) { if (e.target === overlay) close(false); });
+                    document.body.appendChild(overlay);
+
+                    var okBtn = overlay.querySelector('#cdlg-ok');
+                    var cancelBtn = overlay.querySelector('#cdlg-cancel');
+                    if (okBtn) {
+                        okBtn.onmouseover = function() { this.style.background = confirmClr + '44'; };
+                        okBtn.onmouseout  = function() { this.style.background = confirmClr + '22'; };
+                        okBtn.onclick = function() { close(true); };
+                    }
+                    if (cancelBtn) {
+                        cancelBtn.onmouseover = function() { this.style.background = '#334155'; };
+                        cancelBtn.onmouseout  = function() { this.style.background = '#1e293b'; };
+                        cancelBtn.onclick = function() { close(false); };
+                    }
+                });
+            }
+
+            // Animated toast notification
             var _tt;
-            function toast(m, ok) {
+            function toast(m, ok, icon) {
                 ok = ok !== false;
                 var t = $("toast");
-                t.style.background = ok
-                    ? "linear-gradient(135deg,#0a1226,#0d1f4a)"
-                    : "linear-gradient(135deg,#1a0e04,#2a0808)";
-                t.style.border = "1px solid " + (ok ? "var(--grn)" : "#ef4444");
-                t.style.color = ok ? "var(--grn)" : "var(--orange)";
-                t.textContent = (ok ? "✓ " : "✗ ") + m;
-                t.style.display = "block";
+                var emoji = icon || (ok ? '✓' : '✗');
+
+                // Auto-map known error strings to nicer messages
+                if (!ok) {
+                    var mapped = getErrInfo(m);
+                    // For critical auth/perm errors, show modal instead
+                    if (mapped && (mapped === ERR_MAP.not_linked || mapped === ERR_MAP.unauthorized)) {
+                        showAlert(null, m);
+                        return;
+                    }
+                }
+
+                t.innerHTML =
+                    '<div style="display:flex;align-items:center;gap:10px">' +
+                    '<span style="font-size:16px;flex-shrink:0">' + emoji + '</span>' +
+                    '<span>' + m + '</span>' +
+                    '</div>';
+                t.style.cssText = [
+                    'position:fixed',
+                    'bottom:24px',
+                    'right:24px',
+                    'z-index:99998',
+                    'padding:13px 18px',
+                    'border-radius:14px',
+                    'font-size:13px',
+                    'font-weight:700',
+                    'max-width:340px',
+                    'box-shadow:0 8px 32px #00000055',
+                    'transition:opacity .3s,transform .3s',
+                    'font-family:inherit',
+                    ok
+                        ? 'background:linear-gradient(135deg,#0a2010,#0d3020);border:1px solid #22c55e55;color:#4ade80'
+                        : 'background:linear-gradient(135deg,#200a0a,#2d0f0f);border:1px solid #ef444455;color:#fca5a5',
+                    'display:block',
+                    'opacity:1',
+                    'transform:translateY(0)'
+                ].join(';');
+
                 clearTimeout(_tt);
                 _tt = setTimeout(function () {
-                    t.style.display = "none";
-                }, 3500);
+                    t.style.opacity = '0';
+                    t.style.transform = 'translateY(10px)';
+                    setTimeout(function() { t.style.display = 'none'; }, 300);
+                }, 3800);
             }
             function getMem(email) {
                 return (
@@ -2368,6 +2535,7 @@
                 );
             }
             function resolveUID(t) {
+                if (t.member_id) return t.member_id;
                 if (t.memberUID && t.memberUID.indexOf("SIPR26") === 0)
                     return t.memberUID;
                 if (t.memberEmail) {
@@ -2390,19 +2558,19 @@
                     });
                     if (m) return m.name;
                 }
-                return t.member || "Unknown";
+                return t.member_name || t.member || "Unknown";
             }
             function txMatch(t, mem) {
                 var u = resolveUID(t);
                 if (u) return u === mem.id;
-                return t.member === mem.name;
+                return (t.member_name || t.member) === mem.name;
             }
             // Permission helpers
             function isAdmin() {
                 return S.role === "admin" || S.email === "jaziro@sipr.com";
             }
             function adminRecovery() {
-                if (!confirm("Restore your admin account?")) return;
+                confirmDialog({ icon: '🔑', title: 'Restore Admin?', message: 'This will restore your admin account privileges.', confirmText: 'Yes, Restore', confirmColor: '#4f8ef7' }).then(function(ok) { if (!ok) return;
                 var me = DEF_MEMS.find(function (m) {
                     return m.id === "SIPR26-JH-6729";
                 });
@@ -2433,6 +2601,7 @@
                         toast(e.message || "Error restoring admin", false);
                     }
                 })();
+                });
             }
             function canRemind() {
                 if (S.role === "admin") return true;
@@ -2502,12 +2671,13 @@
 
                 const res = await API.login(em, pw);
                 if (!res || res.error) {
-                    showErr(
-                        "lerr",
-                        res?.message ||
-                            res?.error ||
-                            "Login failed. Try again.",
-                    );
+                    var raw = res?.body?.message || res?.body?.error || res?.message || res?.error || 'invalid_credentials';
+                    var info = getErrInfo(raw);
+                    if (info) {
+                        showAlert(null, raw);
+                    } else {
+                        showErr('lerr', '🔑 ' + (raw || 'Login failed. Please check your credentials.'));
+                    }
                     return;
                 }
 
@@ -2542,10 +2712,10 @@
             function fPass() {
                 var em = ($("em") || { value: "" }).value.trim();
                 if (!em) {
-                    showErr("lerr", "Enter your email first.");
+                    showErr("lerr", "📧 Enter your email address first.");
                     return;
                 }
-                showErr("lerr", "Contact admin to reset password.");
+                showErr("lerr", "🔐 Password reset is managed by the admin. Contact your group admin to reset your password.");
             }
 
             function showReg() {
@@ -2876,9 +3046,16 @@
                     window.location.search,
                 ).get("error");
                 if (errorParam) {
+                    // Map error codes from Laravel OAuth to user-friendly alerts
+                    var googleErrMap = {
+                        'not_linked':   'not_linked',
+                        'access_denied':'google_cancelled',
+                        'not_found':    'not_found',
+                    };
+                    var alertKey = googleErrMap[errorParam] || null;
                     setTimeout(function () {
-                        showErr("lerr", "Google login failed: " + errorParam);
                         doneLoading();
+                        showAlert(alertKey, errorParam);
                     }, 500);
                     window.history.replaceState(
                         {},
@@ -2895,12 +3072,13 @@
             // ═══════════ DATA ═══════════
             async function loadMembers(cb) {
                 const data = await API.getMembers();
-                if (!data || !data.data) {
+                const list = data && data.data ? data.data : (Array.isArray(data) ? data : null);
+                if (!list) {
                     S.mems = DEF_MEMS.slice();
                     if (cb) cb();
                     return;
                 }
-                S.mems = data.data;
+                S.mems = list;
                 if (cb) cb();
             }
 
@@ -2908,8 +3086,9 @@
                 // Poll for transactions every 10 seconds
                 (async function refTxs() {
                     const data = await API.getTransactions();
-                    if (data && data.data) {
-                        S.txs = data.data.sort(function (a, b) {
+                    const list = data && data.data ? data.data : (Array.isArray(data) ? data : null);
+                    if (list) {
+                        S.txs = list.sort(function (a, b) {
                             return new Date(b.date) - new Date(a.date);
                         });
                         if (
@@ -2932,8 +3111,9 @@
                 // Poll for projects every 10 seconds
                 (async function refInvs() {
                     const data = await API.getProjects();
-                    if (data && data.data) {
-                        S.invs = data.data;
+                    const list = data && data.data ? data.data : (Array.isArray(data) ? data : null);
+                    if (list) {
+                        S.invs = list;
                         if (S.tab === "dashboard" || S.tab === "investments")
                             render();
                     }
@@ -2944,6 +3124,18 @@
             function loadWallets() {
                 // For now, wallets are fetched on-demand per member
                 // No real-time polling needed
+            }
+            async function loadGoals() {
+                try {
+                    const data = await API.getGoals();
+                    const list = data && data.data ? data.data : (Array.isArray(data) ? data : null);
+                    if (list) {
+                        S.goals = list;
+                        if (S.tab === "goals") render();
+                    }
+                } catch (e) {
+                    console.error("Failed to load goals", e);
+                }
             }
 
             function logAct(action, detail) {
@@ -3068,6 +3260,7 @@
                 loadTxs();
                 loadInvs();
                 loadWallets();
+                loadGoals();
                 goPage("dashboard");
                 if (isAdmin()) {
                     (async () => {
@@ -3116,8 +3309,8 @@
             }
 
             function setLabels() {
-                var me = getMem(S.email);
-                var avH = av(S.name || "?", 32);
+                var me = getMem(S.email) || {};
+                var avH = av(S.name || "?", 32, me);
                 var rc =
                     {
                         admin: "Admin",
@@ -3140,7 +3333,7 @@
                 if (pdi)
                     pdi.innerHTML =
                         "<div style='display:flex;align-items:center;gap:8px'>" +
-                        av(S.name, 36) +
+                        av(S.name, 36, me) +
                         "<div><div style='font-size:13px;font-weight:800'>" +
                         S.name +
                         "</div><div style='font-size:11px;color:var(--mut)'>" +
@@ -3201,6 +3394,116 @@
                 closeProf();
                 render();
             }
+
+            // ═══════════ GLOBAL SEARCH ═══════════
+            function openSearch() {
+                var h = "<div class='modal-bg' onclick='if(event.target===this)closeModal()' style='align-items:flex-start;padding-top:60px'>";
+                h += "<div style='background:var(--sur);border:1px solid var(--bor);border-radius:20px;width:100%;max-width:540px;overflow:hidden;box-shadow:0 24px 80px #00000088;animation:slideUp .2s cubic-bezier(.34,1.56,.64,1)'>";
+                // Search bar
+                h += "<div style='display:flex;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid var(--bor)'>";
+                h += "<span style='font-size:18px;color:var(--mut)'>🔎</span>";
+                h += "<input id='gs-input' type='text' placeholder='Search members, transactions, projects...' oninput='handleSearch()' onkeydown='handleSearchKey(event)' style='flex:1;background:none;border:none;outline:none;font-size:15px;color:var(--txt);font-family:inherit;font-weight:600' autofocus/>";
+                h += "<button onclick='closeModal()' style='background:none;border:none;color:var(--mut);font-size:18px;cursor:pointer;padding:4px'>✕</button>";
+                h += "</div>";
+                // Results container
+                h += "<div id='gs-results' style='max-height:420px;overflow-y:auto;padding:10px'>";
+                h += "<div style='text-align:center;padding:32px 20px;color:var(--mut)'>";
+                h += "<div style='font-size:36px;margin-bottom:8px;opacity:.4'>🔍</div>";
+                h += "<div style='font-size:13px;font-weight:600'>Start typing to search everything...</div>";
+                h += "<div style='font-size:11px;margin-top:4px;opacity:.6'>Members · Transactions · Projects</div>";
+                h += "</div></div>";
+                // Keyboard hint
+                h += "<div style='padding:8px 18px;border-top:1px solid var(--bor);display:flex;gap:16px'>";
+                h += "<span style='font-size:10px;color:var(--mut)'><kbd style='background:var(--s2);border:1px solid var(--bor);border-radius:4px;padding:1px 5px;font-size:9px'>↵</kbd> Navigate</span>";
+                h += "<span style='font-size:10px;color:var(--mut)'><kbd style='background:var(--s2);border:1px solid var(--bor);border-radius:4px;padding:1px 5px;font-size:9px'>Esc</kbd> Close</span>";
+                h += "</div>";
+                h += "</div></div>";
+                $("modal").innerHTML = h;
+                setTimeout(function() { var i = $("gs-input"); if (i) i.focus(); }, 80);
+            }
+
+            function handleSearchKey(e) {
+                if (e.key === "Escape") { closeModal(); return; }
+            }
+
+            function handleSearch() {
+                var q = ($("gs-input") || {value:""}).value.trim().toLowerCase();
+                var res = $("gs-results");
+                if (!res) return;
+
+                if (!q || q.length < 2) {
+                    res.innerHTML = "<div style='text-align:center;padding:32px 20px;color:var(--mut)'><div style='font-size:36px;margin-bottom:8px;opacity:.4'>🔍</div><div style='font-size:13px;font-weight:600'>Start typing to search everything...</div><div style='font-size:11px;margin-top:4px;opacity:.6'>Members · Transactions · Projects</div></div>";
+                    return;
+                }
+
+                var sections = [];
+
+                // ── Members ──
+                var mems = (S.mems || []).filter(function(m) {
+                    return (m.name||"").toLowerCase().includes(q) ||
+                           (m.email||"").toLowerCase().includes(q) ||
+                           (m.phone||"").toLowerCase().includes(q) ||
+                           (m.title||"").toLowerCase().includes(q);
+                }).slice(0, 5);
+                if (mems.length) {
+                    var mh = "<div style='padding:6px 8px;font-size:9px;color:var(--mut);font-weight:700;letter-spacing:1.5px;margin-top:4px'>MEMBERS</div>";
+                    mems.forEach(function(m) {
+                        var roleColor = {admin:"var(--red)",finance:"var(--gold)",secretary:"var(--teal)",member:"var(--mut)"}[m.role||"member"]||"var(--mut)";
+                        mh += "<div onclick='closeModal();goPage(\"members\")' style='display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;cursor:pointer;transition:background .12s' onmouseover=\"this.style.background='var(--s2)'\" onmouseout=\"this.style.background=''\">";
+                        mh += "<div style='width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--gdm),#1a2540);border:1px solid var(--gbr);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;color:var(--grn);flex-shrink:0'>" + (m.name||"?")[0].toUpperCase() + "</div>";
+                        mh += "<div style='flex:1;min-width:0'><div style='font-size:13px;font-weight:800'>" + m.name + "</div><div style='font-size:11px;color:" + roleColor + ";font-weight:600'>" + (m.role||"member") + " · " + (m.email||"") + "</div></div>";
+                        mh += "<span style='font-size:11px;color:var(--mut)'>→</span></div>";
+                    });
+                    sections.push(mh);
+                }
+
+                // ── Transactions ──
+                var txs = (S.txs || []).filter(function(t) {
+                    return (txName(t)||"").toLowerCase().includes(q) ||
+                           (t.note||"").toLowerCase().includes(q) ||
+                           (t.type||"").toLowerCase().includes(q) ||
+                           String(t.amount||"").includes(q);
+                }).slice(0, 5);
+                if (txs.length) {
+                    var th = "<div style='padding:6px 8px;font-size:9px;color:var(--mut);font-weight:700;letter-spacing:1.5px;margin-top:4px'>TRANSACTIONS</div>";
+                    txs.forEach(function(t) {
+                        var typeColor = {deposit:"var(--grn)",withdrawal:"var(--red)",expense:"var(--orange)",profit:"var(--gold)"}[t.type]||"var(--mut)";
+                        var tid = t.id;
+                        th += "<div onclick='closeModal();goPage(\"finance\")' style='display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;cursor:pointer;transition:background .12s' onmouseover=\"this.style.background='var(--s2)'\" onmouseout=\"this.style.background=''\">";
+                        th += "<div style='width:36px;height:36px;border-radius:10px;background:var(--s2);border:1px solid var(--bor);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0'>" + ({deposit:"💰",withdrawal:"💸",expense:"📉",profit:"📈"}[t.type]||"💳") + "</div>";
+                        th += "<div style='flex:1;min-width:0'><div style='font-size:13px;font-weight:800'>" + txName(t) + " <span style='color:" + typeColor + ";font-size:11px'>" + (t.type||"") + "</span></div>";
+                        th += "<div style='font-size:11px;color:var(--mut)'>" + (t.date||"") + (t.note ? " · " + t.note : "") + "</div></div>";
+                        th += "<span style='font-size:13px;font-weight:800;color:" + typeColor + "'>" + fmt(Number(t.amount||0)) + "</span></div>";
+                    });
+                    sections.push(th);
+                }
+
+                // ── Projects ──
+                var invs = (S.invs || []).filter(function(p) {
+                    return (p.name||"").toLowerCase().includes(q) ||
+                           (p.status||"").toLowerCase().includes(q) ||
+                           (p.projectManagerName||"").toLowerCase().includes(q);
+                }).slice(0, 4);
+                if (invs.length) {
+                    var ih = "<div style='padding:6px 8px;font-size:9px;color:var(--mut);font-weight:700;letter-spacing:1.5px;margin-top:4px'>PROJECTS</div>";
+                    invs.forEach(function(p) {
+                        var stColor = {active:"#4f8ef7",planning:"#fbbf24",completed:"#34d399",paused:"#9580c8",loss:"var(--orange)"}[p.status]||"#fbbf24";
+                        ih += "<div onclick='closeModal();openProject(\"" + p.id + "\")' style='display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;cursor:pointer;transition:background .12s' onmouseover=\"this.style.background='var(--s2)'\" onmouseout=\"this.style.background=''\">";
+                        ih += "<div style='width:36px;height:36px;border-radius:10px;background:var(--s2);border:1px solid var(--bor);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0'>📁</div>";
+                        ih += "<div style='flex:1;min-width:0'><div style='font-size:13px;font-weight:800'>" + p.name + " <span style='background:" + stColor + "22;color:" + stColor + ";padding:1px 7px;border-radius:99px;font-size:10px;font-weight:700'>" + (p.status||"planning") + "</span></div>";
+                        ih += "<div style='font-size:11px;color:var(--mut)'>" + (p.projectManagerName ? "Manager: " + p.projectManagerName : "No manager") + " · " + fmt(Number(p.capitalDeployed||p.amount||0)) + "</div></div>";
+                        ih += "<span style='font-size:11px;color:var(--mut)'>→</span></div>";
+                    });
+                    sections.push(ih);
+                }
+
+                if (!sections.length) {
+                    res.innerHTML = "<div style='text-align:center;padding:32px 20px;color:var(--mut)'><div style='font-size:36px;margin-bottom:8px;opacity:.3'>🕵️</div><div style='font-size:14px;font-weight:700;margin-bottom:4px'>No results for \"" + q + "\"</div><div style='font-size:12px;opacity:.6'>Try a different keyword</div></div>";
+                } else {
+                    res.innerHTML = sections.join("<div style='height:1px;background:var(--bor);margin:4px 8px'></div>");
+                }
+            }
+
             function moreMenu() {
                 var vis = NAVS.filter(function (n) {
                     return !n.adm || isAdmin();
@@ -3561,9 +3864,9 @@
                     { icon: "🔍", l: "Audit", tab: "activity" },
                 ].forEach(function (a) {
                     h +=
-                        "<div onclick='goPage(this.dataset.dt)' data-dt='" +
+                        "<div onclick='" + (a.tab === "__search__" ? "openSearch()" : "goPage(this.dataset.dt)") + "' data-dt='" +
                         a.tab +
-                        "' style='background:var(--sur);border:1px solid var(--bor);border-radius:12px;padding:11px 6px;text-align:center;cursor:pointer'>";
+                        "' style='background:var(--sur);border:1px solid var(--bor);border-radius:12px;padding:11px 6px;text-align:center;cursor:pointer;transition:border-color .2s,transform .15s' onmouseover=\"this.style.borderColor='var(--grn)';this.style.transform='translateY(-2px)'\" onmouseout=\"this.style.borderColor='var(--bor)';this.style.transform=''\">";
                     h +=
                         "<div style='font-size:20px;margin-bottom:4px'>" +
                         a.icon +
@@ -4833,7 +5136,7 @@
                             inv.id +
                             "'>";
                         h +=
-                            "<div style='padding:16px 18px;display:flex;align-items:center;gap:14px'>";
+                            "<div style='padding:16px 18px;display:flex;align-items:center;gap:14px;border-radius:18px;overflow:hidden'>";
                         h +=
                             "<div style='width:4px;height:40px;border-radius:99px;background:" +
                             st.C +
@@ -4901,8 +5204,15 @@
                                 (pl > 0 ? "+" : "") +
                                 fmt(pl) +
                                 "</div>";
-                        h +=
-                            "</div><div style='color:var(--mut);font-size:16px;flex-shrink:0;margin-left:4px'>&#x203A;</div>";
+                        h += "</div>";
+                        // 3-dot menu (admin only)
+                        if (isAdmin()) {
+                            h += "<div style='flex-shrink:0;margin-left:6px' onclick='event.stopPropagation()'>";
+                            h += "<button id='pm-btn-" + inv.id + "' onclick='toggleProjMenu(event,this.dataset.id)' data-id='" + inv.id + "' style='background:none;border:none;color:var(--mut);font-size:20px;cursor:pointer;padding:4px 8px;border-radius:8px;line-height:1;font-family:inherit' title='Options'>&#x22EF;</button>";
+                            h += "</div>";
+                        } else {
+                            h += "<div style='color:var(--mut);font-size:16px;flex-shrink:0;margin-left:4px'>&#x203A;</div>";
+                        }
                         h += "</div>";
                         h += "</div>";
                     });
@@ -4912,11 +5222,43 @@
                 return h;
             }
 
-            function toggleProjMenu(id) {
-                var dd = $("pm-dd-" + id);
-                if (dd)
-                    dd.style.display =
-                        dd.style.display === "block" ? "none" : "block";
+            function toggleProjMenu(e, id) {
+                e.stopPropagation();
+                var existing = document.getElementById('proj-ctx-menu');
+                // If same menu open, close it
+                if (existing && existing.dataset.projId === String(id)) {
+                    existing.remove();
+                    return;
+                }
+                if (existing) existing.remove();
+
+                var btn = document.getElementById('pm-btn-' + id);
+                if (!btn) return;
+                var rect = btn.getBoundingClientRect();
+
+                var menu = document.createElement('div');
+                menu.id = 'proj-ctx-menu';
+                menu.dataset.projId = String(id);
+                menu.style.cssText = 'position:fixed;z-index:9999;background:var(--sur);border:1px solid var(--bor);border-radius:12px;min-width:140px;box-shadow:0 8px 32px #000a;overflow:hidden;animation:fadeIn .12s ease';
+                menu.style.top = (rect.bottom + 6) + 'px';
+                menu.style.right = (window.innerWidth - rect.right) + 'px';
+
+                menu.innerHTML =
+                    '<button onclick="openInv(\'' + id + '\');document.getElementById(\'proj-ctx-menu\').remove()" style="display:block;width:100%;padding:12px 16px;background:none;border:none;color:var(--txt);font-size:13px;font-weight:700;cursor:pointer;text-align:left;font-family:inherit" onmouseover="this.style.background=\'var(--s2)\'" onmouseout="this.style.background=\'none\'">&#x270E; Edit</button>' +
+                    '<div style="height:1px;background:var(--bor)"></div>' +
+                    '<button onclick="delInv(\'' + id + '\');document.getElementById(\'proj-ctx-menu\')&&document.getElementById(\'proj-ctx-menu\').remove()" style="display:block;width:100%;padding:12px 16px;background:none;border:none;color:#f87171;font-size:13px;font-weight:700;cursor:pointer;text-align:left;font-family:inherit" onmouseover="this.style.background=\'var(--s2)\'" onmouseout="this.style.background=\'none\'">&#x1F5D1; Delete</button>';
+
+                document.body.appendChild(menu);
+
+                // Close on outside click
+                setTimeout(function() {
+                    document.addEventListener('click', function closeMenu(ev) {
+                        if (!menu.contains(ev.target)) {
+                            menu.remove();
+                            document.removeEventListener('click', closeMenu);
+                        }
+                    });
+                }, 0);
             }
 
             function getProjectById(invId) {
@@ -5076,14 +5418,18 @@
                 h +=
                     "<div style='display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px'>";
                 h +=
-                    "<div><div style='font-size:10px;letter-spacing:2px;color:var(--mut);font-weight:700;margin-bottom:4px'>PROJECT DETAILS</div><div style='font-size:18px;font-weight:900'>" +
+                    "<div style='display:flex;align-items:center;gap:10px;flex-wrap:wrap'>";
+                h +=
+                    "<button onclick='backToProjects()' style='display:flex;align-items:center;gap:5px;background:var(--s2);border:1px solid var(--bor);color:var(--mut);padding:6px 12px;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s' onmouseover=\"this.style.color='var(--txt)';this.style.borderColor='var(--grn)'\" onmouseout=\"this.style.color='var(--mut)';this.style.borderColor='var(--bor)'\">&#x2190; All Projects</button>";
+                h +=
+                    "<div><div style='font-size:10px;letter-spacing:2px;color:var(--mut);font-weight:700;margin-bottom:2px'>PROJECT DETAILS</div><div style='font-size:18px;font-weight:900'>" +
                     inv.name +
-                    "</div></div>";
+                    "</div></div></div>";
                 if (canMgr || isAdmin())
                     h +=
                         "<button class='btn-a' onclick='openInv(this.dataset.id)' data-id='" +
                         inv.id +
-                        "'>✎ Edit Project</button>";
+                        "'>&#x270E; Edit Project</button>";
                 h += "</div>";
 
                 // ── OVERVIEW ──
@@ -5812,7 +6158,7 @@
                 })();
             }
             function removeTeamMember(invId, idx) {
-                if (!confirm("Remove this team member?")) return;
+                confirmDialog({ icon: '👤', title: 'Remove Team Member?', message: 'This person will be removed from the project team.', confirmText: 'Remove', confirmColor: '#ef4444' }).then(function(ok) { if (!ok) return;
                 var inv = getProjectById(invId);
                 if (!inv) return;
                 var team = (inv.teamEntries || []).slice();
@@ -5825,6 +6171,7 @@
                         toast(e.message || "Error removing team member", false);
                     }
                 })();
+                });
             }
             // Contacts
             function openContact(invId, type, idx) {
@@ -5918,7 +6265,7 @@
                 })();
             }
             function delContact(invId, type, idx) {
-                if (!confirm("Delete this contact?")) return;
+                confirmDialog({ icon: '🗑', title: 'Delete Contact?', message: 'This contact will be permanently removed.', confirmText: 'Delete', confirmColor: '#ef4444' }).then(function(ok) { if (!ok) return;
                 var inv = getProjectById(invId);
                 if (!inv) return;
                 var field = type === 0 ? "suppliers" : "buyers";
@@ -5934,6 +6281,7 @@
                         toast(e.message || "Error deleting contact", false);
                     }
                 })();
+                });
             }
             function openExtInv(invId) {
                 var h =
@@ -5986,7 +6334,7 @@
                 })();
             }
             function delExtInv(invId, idx) {
-                if (!confirm("Remove?")) return;
+                confirmDialog({ icon: '🗑', title: 'Remove Investor?', message: 'This investor will be removed from the project.', confirmText: 'Remove', confirmColor: '#ef4444' }).then(function(ok) { if (!ok) return;
                 var inv = getProjectById(invId);
                 if (!inv) return;
                 var list = (inv.externalInvestors || []).slice();
@@ -6001,6 +6349,7 @@
                         toast(e.message || "Error removing investor", false);
                     }
                 })();
+                });
             }
             // Collection
             function openCollection(invId, idx) {
@@ -6245,7 +6594,7 @@
                 })();
             }
             function delProjectExpense(invId, idx) {
-                if (!confirm("Delete this expense?")) return;
+                confirmDialog({ icon: '📉', title: 'Delete Expense?', message: 'This expense entry will be permanently deleted.', confirmText: 'Delete', confirmColor: '#ef4444' }).then(function(ok) { if (!ok) return;
                 var inv = getProjectById(invId);
                 if (!inv) return;
                 var expenses = (inv.projectExpenses || []).slice();
@@ -6260,6 +6609,7 @@
                         toast(e.message || "Error deleting expense", false);
                     }
                 })();
+                });
             }
 
             function openSale(invId, idx) {
@@ -6778,7 +7128,7 @@
                 if (rv) rv.value = sk && pp ? Math.round(sk * pp) : "";
             }
             function delCollection(invId, idx) {
-                if (!confirm("Delete this entry?")) return;
+                confirmDialog({ icon: '🗑', title: 'Delete Entry?', message: 'This collection entry will be permanently removed.', confirmText: 'Delete', confirmColor: '#ef4444' }).then(function(ok) { if (!ok) return;
                 var inv = getProjectById(invId);
                 if (!inv) return;
                 var cols2 = (inv.collections || []).slice();
@@ -6799,6 +7149,7 @@
                         toast(e.message || "Error deleting collection", false);
                     }
                 })();
+                });
             }
             function openMilestone(invId) {
                 $("modal").innerHTML =
@@ -6852,22 +7203,22 @@
                 })();
             }
             function delInv(id) {
-                if (
-                    !confirm(
-                        "Delete this project? All collection data will be lost.",
-                    )
-                )
-                    return;
-                (async () => {
-                    try {
-                        const res = await API.deleteProject(id);
-                        if (!res) throw new Error("Failed to delete project");
-                        logAct("delete_investment", id);
-                        toast("Deleted.");
-                    } catch (e) {
-                        toast(e.message || "Error deleting project", false);
-                    }
-                })();
+                confirmDialog({ icon: '🗂', title: 'Delete Project?', message: 'All collection data for this project will be permanently lost. This cannot be undone.', confirmText: 'Delete Project', confirmColor: '#ef4444' }).then(function(ok) {
+                    if (!ok) return;
+                    (async () => {
+                        try {
+                            const res = await API.deleteProject(id);
+                            if (!res || res.error) throw new Error(res?.body?.message || 'Failed to delete project');
+                            S.invs = S.invs.filter(function(p) { return String(p.id) !== String(id); });
+                            S.activeProj = null;
+                            logAct('delete_investment', id);
+                            toast('Project deleted successfully.', true, '🗑');
+                            goPage('investments');
+                        } catch (e) {
+                            toast(e.message || 'Error deleting project', false);
+                        }
+                    })();
+                });
             }
 
             // ═══════════ TRANSACTIONS ═══════════
@@ -7197,7 +7548,7 @@
             }
 
             function delTx(id) {
-                if (!confirm("Delete?")) return;
+                confirmDialog({ icon: '🗑', title: 'Delete Transaction?', message: 'This transaction will be permanently removed from records.', confirmText: 'Delete', confirmColor: '#ef4444' }).then(function(ok) { if (!ok) return;
                 (async () => {
                     try {
                         const res = await API.deleteTransaction(id);
@@ -7209,6 +7560,7 @@
                         toast(e.message || "Error deleting transaction", false);
                     }
                 })();
+                });
             }
 
             // ═══════════ MEMBERS ═══════════
@@ -7342,18 +7694,25 @@
                             (m.googleUid ? "✓ Linked" : "Not linked") +
                             "</div></div></div>";
                         h +=
-                            "<div class='g2' style='gap:8px;margin-bottom:10px'>";
+                            "<div style='display:flex;flex-direction:column;gap:8px;margin-bottom:10px'>";
                         [
-                            ["ID", m.id],
-                            ["Phone", m.phone || "Not set"],
-                            ["Email", m.email],
-                            ["Address", m.address || "Not set"],
+                            ["ID", m.id, null],
+                            ["Phone", m.phone || "Not set", null],
+                            ["System Email", m.email, null],
+                            ["Google Email", m.google_email || "Not linked", m.google_email ? "#ea4335" : null],
+                            ["Address", m.address || "Not set", null],
                         ].forEach(function (r) {
+                            var label = r[0], value = r[1], color = r[2];
                             h +=
-                                "<div style='background:var(--s2);border-radius:9px;padding:9px 11px;border:1px solid var(--bor)'><div style='font-size:9px;color:var(--mut);font-weight:700;margin-bottom:2px'>" +
-                                r[0] +
-                                "</div><div style='font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'>" +
-                                r[1] +
+                                "<div style='background:var(--s2);border-radius:9px;padding:9px 11px;border:1px solid " +
+                                (color ? color + "44" : "var(--bor)") +
+                                "'>" +
+                                "<div style='font-size:9px;color:" + (color || "var(--mut)") + ";font-weight:700;margin-bottom:2px;display:flex;align-items:center;gap:5px'>" +
+                                (label === "Google Email" ? "<span style='font-size:11px'>G</span>" : "") +
+                                label +
+                                "</div>" +
+                                "<div style='font-size:12px;font-weight:700;color:" + (color && value !== "Not linked" ? color : "var(--txt)") + ";overflow:hidden;text-overflow:ellipsis;white-space:nowrap'>" +
+                                value +
                                 "</div></div>";
                         });
                         h += "</div>";
@@ -7637,60 +7996,50 @@
                 })();
             }
             function unlinkGoogle(mid) {
-                if (
-                    !confirm(
-                        "Unlink Google account? The member will need to re-link with their invite code.",
-                    )
-                )
-                    return;
-                (async () => {
-                    try {
-                        const res = await API.updateMember(mid, {
-                            googleUid: null,
-                            googleEmail: null,
-                        });
-                        var mem = S.mems.find(function (m) {
-                            return m.id === mid;
-                        });
-                        if (mem) {
-                            delete mem.googleUid;
-                            delete mem.googleEmail;
+                confirmDialog({ icon: '🔗', title: 'Unlink Google Account?', message: 'The member will lose Google sign-in access and must re-link using their invite code.', confirmText: 'Unlink', confirmColor: '#f59e0b' }).then(function(ok) {
+                    if (!ok) return;
+                    (async () => {
+                        try {
+                            const res = await API.updateMember(mid, {
+                                googleUid: null,
+                                googleEmail: null,
+                            });
+                            var mem = S.mems.find(function (m) {
+                                return m.id === mid;
+                            });
+                            if (mem) {
+                                delete mem.googleUid;
+                                delete mem.googleEmail;
+                            }
+                            render();
+                            toast("Google account unlinked. Member can now re-link.");
+                        } catch (e) {
+                            toast(e.message || "Error unlinking Google", false);
                         }
-                        render();
-                        toast(
-                            "Google account unlinked. Member can now re-link.",
-                        );
-                    } catch (e) {
-                        toast(e.message || "Error unlinking Google", false);
-                    }
-                })();
+                    })();
+                });
             }
             function removeMember(mid, mname) {
-                if (
-                    !confirm(
-                        "⚠ Remove " +
-                            mname +
-                            " from SIPR?\n\nTheir transaction history will be kept.\nTheir account will be deactivated.",
-                    )
-                )
-                    return;
-                (async () => {
-                    try {
-                        const res = await API.updateMember(mid, {
-                            status: "removed",
-                            removedAt: now(),
-                            removedBy: S.name,
-                        });
-                        S.mems = S.mems.filter(function (m) {
-                            return m.id !== mid;
-                        });
-                        render();
-                        logAct("remove_member", mname);
-                        toast(mname + " has been removed.");
-                    } catch (e) {
-                        toast(e.message || "Error removing member", false);
-                    }
-                })();
+                confirmDialog({ icon: '⚠️', title: 'Remove ' + mname + '?', message: 'Their transaction history will be preserved, but their account will be deactivated and they will lose access to SIPR.', confirmText: 'Remove Member', confirmColor: '#ef4444' }).then(function(ok) {
+                    if (!ok) return;
+                    (async () => {
+                        try {
+                            const res = await API.updateMember(mid, {
+                                status: "removed",
+                                removedAt: now(),
+                                removedBy: S.name,
+                            });
+                            S.mems = S.mems.filter(function (m) {
+                                return m.id !== mid;
+                            });
+                            render();
+                            logAct("remove_member", mname);
+                            toast(mname + " has been removed.");
+                        } catch (e) {
+                            toast(e.message || "Error removing member", false);
+                        }
+                    })();
+                });
             }
 
             // ═══════════ WALLET / PASSBOOK ═══════════
@@ -7883,85 +8232,104 @@
             }
 
             // ═══════════ GOALS ═══════════
-            function pGoals() {
-                var s = stats(),
-                    GOAL = 50000,
-                    gp = pct(s.f, GOAL),
-                    rem = Math.max(0, GOAL - s.f);
-                var ms = [
-                    {
-                        lb: "First Investment",
-                        t: 5000,
-                        ic: "🚀",
-                        c: "var(--grn)",
-                    },
-                    {
-                        lb: "Open Bank Account",
-                        t: 50000,
-                        ic: "🏦",
-                        c: "var(--gold)",
-                    },
-                    {
-                        lb: "Phase 2 Ready",
-                        t: 100000,
-                        ic: "⚙",
-                        c: "var(--purple)",
-                    },
-                    {
-                        lb: "Legal Registration",
-                        t: 150000,
-                        ic: "📜",
-                        c: "#4f8ef7",
-                    },
-                    {
-                        lb: "Phase 3 Launch",
-                        t: 500000,
-                        ic: "🏭",
-                        c: "var(--gold)",
-                    },
-                ];
-                var h =
-                    "<div class='fc'><div><h2 style='font-size:22px;font-weight:800'>Goals & Targets</h2></div><div class='hero'><div style='font-size:10px;letter-spacing:3px;color:var(--mut);font-weight:700;margin-bottom:7px'><span class='live'></span>PRIMARY GOAL — BANK ACCOUNT TARGET</div><div style='display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px;margin-bottom:14px'><div><div style='color:var(--grn);font-weight:900;font-size:42px;letter-spacing:-2px;line-height:1'>" +
-                    gp +
-                    "%</div><div style='color:var(--mut);font-size:12px;margin-top:5px'>" +
-                    fmt(s.f) +
-                    " of " +
-                    fmt(GOAL) +
-                    "</div></div><div style='text-align:right'><div style='color:var(--gold);font-size:13px;font-weight:700'>" +
-                    fmt(rem) +
-                    " remaining</div><div style='color:var(--mut);font-size:11px;margin-top:3px'>~" +
-                    Math.ceil(rem / 4500) +
-                    " months at current rate</div></div></div><div style='height:10px;background:#ffffff0a;border-radius:99px;overflow:hidden'><div style='height:100%;width:" +
-                    gp +
-                    "%;background:linear-gradient(90deg,var(--gbr),var(--grn));border-radius:99px'></div></div></div><div class='card'><div style='font-size:11px;letter-spacing:2px;color:var(--mut);font-weight:700;margin-bottom:14px'>GROWTH MILESTONES</div>";
-                ms.forEach(function (m) {
-                    var mp = pct(s.f, m.t),
-                        done = s.f >= m.t;
-                    h +=
-                        "<div style='margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--bor)'><div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;flex-wrap:wrap;gap:6px'><div style='display:flex;align-items:center;gap:8px'><span style='font-size:20px'>" +
-                        m.ic +
-                        "</span><div style='font-weight:700;font-size:13px;color:" +
-                        (done ? "var(--grn)" : "var(--txt)") +
-                        "'>" +
-                        m.lb +
-                        (done ? " ✓" : "") +
-                        "</div></div><div style='text-align:right'><div style='font-weight:800;font-size:13px;color:" +
-                        m.c +
-                        "'>" +
-                        fmt(m.t) +
-                        "</div><div style='font-size:11px;color:var(--mut)'>" +
-                        (done ? "Achieved!" : mp + "% done") +
-                        "</div></div></div><div class='pbar'><div class='pfill' style='width:" +
-                        mp +
-                        "%;background:" +
-                        (done
-                            ? "linear-gradient(90deg,var(--gbr),var(--grn))"
-                            : "linear-gradient(90deg,#2a1800,var(--gold))") +
-                        "'></div></div></div>";
-                });
+                        function pGoals() {
+                var s = stats();
+                var goals = S.goals || [];
+                var primary = goals.find(function(g) { return g.is_primary; }) || goals[0] || { label: "No Primary Goal", target_amount: 50000 };
+                var GOAL = Number(primary.target_amount) || 50000;
+                var gp = pct(s.f, GOAL);
+                var rem = Math.max(0, GOAL - s.f);
+                
+                var h = "<div class='fc'><div><div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:14px'><div><h2 style='font-size:22px;font-weight:800;margin:0'>Goals & Targets</h2></div>";
+                if (isAdmin()) {
+                    h += "<div><button class='btn-a' onclick='openGoalModal()'>+ Add Goal</button></div>";
+                }
                 h += "</div></div>";
+                
+                if (goals.length > 0) {
+                    h += "<div class='hero'><div style='font-size:10px;letter-spacing:3px;color:var(--mut);font-weight:700;margin-bottom:7px'><span class='live'></span>PRIMARY GOAL — " + (primary.label || "TARGET").toUpperCase() + "</div><div style='display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px;margin-bottom:14px'><div><div style='color:var(--grn);font-weight:900;font-size:42px;letter-spacing:-2px;line-height:1'>" + gp + "%</div><div style='color:var(--mut);font-size:12px;margin-top:5px'>" + fmt(s.f) + " of " + fmt(GOAL) + "</div></div><div style='text-align:right'><div style='color:var(--gold);font-size:13px;font-weight:700'>" + fmt(rem) + " remaining</div><div style='color:var(--mut);font-size:11px;margin-top:3px'>~" + Math.ceil(rem / 4500) + " months at current rate</div></div></div><div style='height:10px;background:#ffffff0a;border-radius:99px;overflow:hidden'><div style='height:100%;width:" + gp + "%;background:linear-gradient(90deg,var(--gbr),var(--grn));border-radius:99px'></div></div></div>";
+                    
+                    h += "<div class='card'><div style='font-size:11px;letter-spacing:2px;color:var(--mut);font-weight:700;margin-bottom:14px'>GROWTH MILESTONES</div>";
+                    goals.forEach(function (m) {
+                        var mpt = Number(m.target_amount);
+                        var mp = pct(s.f, mpt), done = s.f >= mpt;
+                        h += "<div style='margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--bor)'><div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;flex-wrap:wrap;gap:6px'><div style='display:flex;align-items:center;gap:8px'><span style='font-size:20px'>" + (m.icon || "🎯") + "</span><div style='font-weight:700;font-size:13px;color:" + (done ? "var(--grn)" : "var(--txt)") + "'>" + m.label + (done ? " ✓" : "") + "</div></div><div style='display:flex;align-items:center;gap:12px'><div style='text-align:right'><div style='font-weight:800;font-size:13px;color:var(--gold)'>" + fmt(mpt) + "</div><div style='font-size:11px;color:var(--mut)'>" + (done ? "Achieved!" : mp + "% done") + "</div></div>";
+                        
+                        if (isAdmin()) {
+                            h += "<div style='display:flex;gap:6px;'><button style='background:var(--s2);color:var(--txt);border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:12px;font-weight:600' onclick='openGoalModal(" + m.id + ")'>Edit</button><button style='background:#4a1111;color:#ff6b6b;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:12px;font-weight:600' onclick='deleteGoalUi(" + m.id + ")'>Delete</button></div>";
+                        }
+                        
+                        h += "</div></div><div class='pbar'><div class='pfill' style='width:" + mp + "%;background:" + (done ? "linear-gradient(90deg,var(--gbr),var(--grn))" : "linear-gradient(90deg,#2a1800,var(--gold))") + "'></div></div></div>";
+                    });
+                    h += "</div>";
+                } else {
+                    h += "<div class='hero' style='text-align:center;padding:40px 20px'><div style='font-size:40px;margin-bottom:10px'>🎯</div><div style='font-weight:800;font-size:18px;margin-bottom:6px'>No Goals Set</div><div style='color:var(--mut);font-size:13px;margin-bottom:20px'>Set up financial targets to track progress.</div>";
+                    if (isAdmin()) h += "<button class='btn-a' onclick='openGoalModal()'>Create First Goal</button>";
+                    h += "</div>";
+                }
+                
+                h += "</div>";
                 return h;
             }
+
+            function openGoalModal(id) {
+                var g = id ? S.goals.find(function(x) { return x.id === id; }) : null;
+                var h = "<div class='modal-bg' onclick='if(event.target===this)closeModal()'><div class='modal-box'>";
+                h += "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:18px'><div style='font-weight:800;font-size:17px'>" + (g ? "Edit Goal" : "New Goal") + "</div><button onclick='closeModal()' style='background:none;border:none;color:var(--mut);font-size:20px;cursor:pointer'>✕</button></div>";
+                h += "<div class='fc'>";
+                h += "<label class='inp-label'>Goal Label</label><input type='text' id='sg-label' class='inp' placeholder='e.g. Open Bank Account' value='" + (g ? g.label : "") + "'>";
+                h += "<label class='inp-label'>Target Amount ($)</label><input type='number' id='sg-target' class='inp' placeholder='50000' value='" + (g ? g.target_amount : "") + "'>";
+                h += "<label class='inp-label'>Emoji Icon</label><input type='text' id='sg-icon' class='inp' placeholder='🎯' value='" + (g && g.icon ? g.icon : "🎯") + "'>";
+                h += "<label class='inp-label' style='display:flex;align-items:center;gap:8px;margin-top:10px'><input type='checkbox' id='sg-primary' " + (g && g.is_primary ? "checked" : "") + "> Set as Primary Goal</label>";
+                h += "<div style='display:flex;gap:10px;margin-top:24px'><button class='btn-a' style='flex:1' onclick='saveGoal(" + (id || 0) + ")'>Save Goal</button><button class='btn-d' style='flex:1' onclick='closeModal()'>Cancel</button></div></div></div></div>";
+                $("modal").innerHTML = h;
+            }
+
+            function saveGoal(id) {
+                var label = $("sg-label").value.trim();
+                var target = $("sg-target").value.trim();
+                var icon = $("sg-icon").value.trim();
+                var primary = $("sg-primary").checked;
+                
+                if (!label || !target) return toast("Label and Target are required", false);
+                
+                var data = {
+                    label: label,
+                    target_amount: target,
+                    icon: icon || "🎯",
+                    is_primary: primary,
+                    sort_order: S.goals.length
+                };
+                
+                (async () => {
+                    try {
+                        if (id) {
+                            await API.updateGoal(id, data);
+                            toast("Goal updated!");
+                        } else {
+                            await API.createGoal(data);
+                            toast("Goal created!");
+                        }
+                        closeModal();
+                        await loadGoals();
+                    } catch (e) {
+                        toast(e.message || "Error saving goal", false);
+                    }
+                })();
+            }
+
+            function deleteGoalUi(id) {
+                confirmDialog({ icon: '🗑', title: 'Delete Goal?', message: 'This goal will be permanently removed.', confirmText: 'Delete', confirmColor: '#ef4444' }).then(async function(ok) { if (!ok) return;
+                try {
+                    await API.deleteGoal(id);
+                    toast("Goal deleted.");
+                    await loadGoals();
+                } catch (e) {
+                    toast(e.message || "Error deleting goal", false);
+                }
+                });
+            }
+
 
             // ═══════════ NOTICE BOARD ═══════════
             function pNotice() {
@@ -8019,6 +8387,9 @@
                 }
                 el.innerHTML = anns
                     .map(function (a) {
+                        var msg = a.body || a.message || "";
+                        var ath = a.posted_by_name || a.author || "Unknown";
+                        var dt = a.created_at || a.createdAt;
                         return (
                             "<div class='card' style='border-color:" +
                             (a.pinned ? "var(--gold)22" : "var(--bor)") +
@@ -8029,11 +8400,7 @@
                             "<div style='font-weight:700;font-size:14px'>" +
                             a.title +
                             "</div></div><div style='display:flex;gap:5px;align-items:center'><span style='font-size:11px;color:var(--mut)'>" +
-                            fd(
-                                a.createdAt && a.createdAt.toDate
-                                    ? a.createdAt.toDate()
-                                    : a.createdAt,
-                            ) +
+                            fd(dt && dt.toDate ? dt.toDate() : dt) +
                             "</span>" +
                             (canAnnounce()
                                 ? "<button onclick='delAnn(\"" +
@@ -8041,15 +8408,15 @@
                                   "\")' class='btn-d' style='padding:3px 8px;font-size:11px'>Del</button>"
                                 : "") +
                             "</div></div><div style='color:var(--mut);font-size:13px;line-height:1.7'>" +
-                            a.message +
-                            "</div><div style='margin-top:7px;font-size:11px;color:var(--mut)'>By " +
-                            a.author +
-                            "</span>" +
+                            msg +
+                            "</div><div style='margin-top:7px;font-size:11px;color:var(--mut);display:flex;justify-content:space-between;align-items:center'><div>By " +
+                            ath +
+                            "</div>" +
                             "<button onclick='shareAnnWA(this.dataset.t,this.dataset.m)'" +
                             " data-t='" +
                             a.title +
                             "' data-m='" +
-                            a.message +
+                            msg +
                             "'" +
                             " style='padding:5px 12px;border-radius:8px;border:1px solid #25d366;background:#071a0f;color:#25d366;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit'>&#x1F4F2; Share WA</button></div></div>"
                         );
@@ -8083,13 +8450,15 @@
                 }
                 el.innerHTML = props
                     .map(function (p) {
-                        var yes = (p.votesYes || []).length,
-                            no = (p.votesNo || []).length,
+                        var vy = p.votes_yes || p.votesYes || [],
+                            vn = p.votes_no || p.votesNo || [],
+                            yes = vy.length,
+                            no = vn.length,
                             total = yes + no,
                             myVote =
-                                (p.votesYes || []).indexOf(S.email) >= 0
+                                vy.indexOf(S.email) >= 0
                                     ? "yes"
-                                    : (p.votesNo || []).indexOf(S.email) >= 0
+                                    : vn.indexOf(S.email) >= 0
                                       ? "no"
                                       : "",
                             pct2 =
@@ -8099,6 +8468,7 @@
                             approved: "#4f8ef7",
                             rejected: "var(--red)",
                         };
+                        var pb = p.proposed_by || p.proposedBy || "Unknown";
                         return (
                             "<div class='card'><div style='display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:9px;flex-wrap:wrap;gap:7px'><div><div style='font-weight:700;font-size:14px;margin-bottom:3px'>" +
                             p.title +
@@ -8153,7 +8523,7 @@
                             " No · " +
                             pct2 +
                             "% favour · By " +
-                            p.proposedBy +
+                            pb +
                             "</div></div>"
                         );
                     })
@@ -8173,8 +8543,9 @@
                 (async () => {
                     try {
                         const res = await API.createNotice({
+                            type: 'announcement',
                             title: t,
-                            message: m,
+                            body: m,
                             pinned: ($("an-p") || { checked: false }).checked,
                         });
                         if (!res) throw new Error(res?.message || "Failed");
@@ -8188,7 +8559,7 @@
                 })();
             }
             function delAnn(id) {
-                if (!confirm("Delete?")) return;
+                confirmDialog({ icon: '📄', title: 'Delete Document?', message: 'This document will be permanently removed from SIPR.', confirmText: 'Delete', confirmColor: '#ef4444' }).then(function(ok) { if (!ok) return;
                 (async () => {
                     try {
                         const res = await API.deleteNotice(id);
@@ -8202,6 +8573,7 @@
                         );
                     }
                 })();
+                });
             }
             function openProp() {
                 $("modal").innerHTML =
@@ -8448,7 +8820,7 @@
                 }
             }
             function delDoc(id) {
-                if (!confirm("Delete?")) return;
+                confirmDialog({ icon: '🗑', title: 'Delete Announcement?', message: 'This announcement will be permanently removed from the noticeboard.', confirmText: 'Delete', confirmColor: '#ef4444' }).then(function(ok) { if (!ok) return;
                 (async () => {
                     try {
                         const res = await API.deleteDocument(id);
@@ -8459,6 +8831,7 @@
                         toast(e.message || "Error deleting document", false);
                     }
                 })();
+                });
             }
 
             // ═══════════ ACTIVITY ═══════════
@@ -8511,6 +8884,8 @@
                         const logs = (res && res.data) || res || [];
                         var TYPE_ICON = {
                             add_payment: "💳",
+                            record_payment: "💳",
+                            update_payment: "💳",
                             add_collection: "📦",
                             record_sale: "💵",
                             add_investment: "📁",
@@ -8525,6 +8900,8 @@
                         };
                         var TYPE_COL = {
                             add_payment: "var(--green)",
+                            record_payment: "var(--green)",
+                            update_payment: "var(--green)",
                             add_collection: "var(--teal)",
                             record_sale: "var(--purple)",
                             add_investment: "var(--gold)",
@@ -8544,8 +8921,9 @@
                                 "<div style='text-align:center;padding:48px 20px;color:var(--mut)'><div style='font-size:32px;margin-bottom:8px;opacity:.3'>🔍</div><div style='font-size:14px;font-weight:700'>No activity yet</div></div>";
                         }
                         logs.forEach(function (log, i) {
-                            var icon = TYPE_ICON[log.type] || "•";
-                            var col = TYPE_COL[log.type] || "var(--mut)";
+                            var actType = log.action || log.type;
+                            var icon = TYPE_ICON[actType] || "•";
+                            var col = TYPE_COL[actType] || "var(--mut)";
                             var ts =
                                 log.created_at ||
                                 log.ts ||
@@ -8586,7 +8964,8 @@
                                 "<div style='font-size:12px;font-weight:700'><span style='color:" +
                                 col +
                                 "'>" +
-                                (log.user ||
+                                (log.performed_by_name ||
+                                    log.user ||
                                     log.addedBy ||
                                     log.member ||
                                     "System") +
@@ -9133,8 +9512,8 @@
                         "<div class='card' style='border-color:var(--gold)44;margin-bottom:0'><div style='color:var(--gold);font-size:11px;font-weight:700;margin-bottom:12px'>⏳ PENDING REGISTRATIONS</div><div style='font-size:12px;color:var(--mut)'>Unable to load pending registrations.</div></div>";
                 }
             }
-            async function approveReg(id) {
-                if (!confirm("Approve this registration?")) return;
+            function approveReg(id) {
+                confirmDialog({ icon: '✅', title: 'Approve Registration?', message: 'This member will gain full access to the SIPR system.', confirmText: 'Approve', confirmColor: '#22c55e' }).then(async function(ok) { if (!ok) return;
                 try {
                     await API.approveRegistration(id);
                     toast("Approved!");
@@ -9142,9 +9521,10 @@
                 } catch (e) {
                     toast(e.message || "Error approving registration", false);
                 }
+                });
             }
-            async function rejectReg(id) {
-                if (!confirm("Reject this registration?")) return;
+            function rejectReg(id) {
+                confirmDialog({ icon: '❌', title: 'Reject Registration?', message: 'This registration request will be permanently rejected.', confirmText: 'Reject', confirmColor: '#ef4444' }).then(async function(ok) { if (!ok) return;
                 try {
                     await API.rejectRegistration(id);
                     toast("Rejected.");
@@ -9152,14 +9532,11 @@
                 } catch (e) {
                     toast(e.message || "Error rejecting registration", false);
                 }
+                });
             }
             function resetMembers() {
-                if (
-                    !confirm(
-                        "Reset all member profiles to defaults?\n\nThis clears phone numbers, addresses, google links.\nTransactions are NOT deleted.",
-                    )
-                )
-                    return;
+                confirmDialog({ icon: '⚡', title: 'Reset All Members?', message: 'This clears phone numbers, addresses and Google links for all members. Transactions are NOT deleted. This cannot be undone.', confirmText: 'Yes, Reset', confirmColor: '#f59e0b' }).then(function(ok) {
+                    if (!ok) return;
                 (async () => {
                     try {
                         await API.resetMembers();
@@ -9171,6 +9548,7 @@
                         toast(e.message || "Error resetting members", false);
                     }
                 })();
+                });
             }
 
             // Demo-compatible render aliases

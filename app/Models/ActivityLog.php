@@ -13,7 +13,7 @@ class ActivityLog extends Model
 
     protected $fillable = [
         'source_id', 'action', 'description', 'performed_by', 'performed_by_name',
-        'performed_by_email', 'performed_by_role', 'iso', 'ts', 'source_payload'
+        'performed_by_email', 'performed_by_role', 'iso', 'ts', 'source_payload', 'created_at'
     ];
 
     public $timestamps = false;
