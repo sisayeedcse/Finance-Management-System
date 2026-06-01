@@ -18,7 +18,7 @@
             content="black-translucent"
         />
         <meta name="apple-mobile-web-app-title" content="SIPR" />
-        <meta name="theme-color" content="#ffffff" />
+        <meta name="theme-color" content="#0c1021" />
         <meta name="application-name" content="SIPR Group" />
         <meta charset="UTF-8" />
         <meta
@@ -75,55 +75,6 @@
             .page {
                 display: none;
             }
-            body::before {
-                content: "";
-                position: fixed;
-                inset: -30vmax;
-                background:
-                    radial-gradient(
-                        circle at 10% 10%,
-                        #2a4fbd30 0%,
-                        transparent 35%
-                    ),
-                    radial-gradient(
-                        circle at 90% 15%,
-                        #20d8c820 0%,
-                        transparent 40%
-                    ),
-                    radial-gradient(
-                        circle at 50% 100%,
-                        #b090ff20 0%,
-                        transparent 45%
-                    );
-                pointer-events: none;
-                z-index: -1;
-            }
-            button,
-            input,
-            select,
-            textarea {
-                font-family: inherit;
-            }
-            button {
-                transition:
-                    transform 0.14s ease,
-                    box-shadow 0.2s ease,
-                    border-color 0.2s ease,
-                    background 0.2s ease;
-            }
-            button:hover {
-                transform: translateY(-1px);
-            }
-            button:active {
-                transform: translateY(0);
-            }
-            button:focus-visible,
-            input:focus-visible,
-            select:focus-visible,
-            textarea:focus-visible {
-                outline: 2px solid #6ea4ff;
-                outline-offset: 2px;
-            }
             /* LOGIN */
             #pg-login {
                 min-height: 100vh;
@@ -137,13 +88,12 @@
                 display: flex;
             }
             .lbox {
-                background: linear-gradient(180deg, #15173a, var(--sur));
+                background: var(--sur);
                 border: 1px solid var(--bor);
                 border-radius: 20px;
                 padding: 36px 32px;
                 width: 100%;
                 max-width: 400px;
-                box-shadow: 0 24px 70px #0000007a;
             }
             .lbl {
                 display: block;
@@ -163,58 +113,10 @@
                 font-size: 14px;
                 font-family: inherit;
                 outline: none;
-                transition:
-                    border 0.15s,
-                    box-shadow 0.15s;
-            }
-            .inp::placeholder {
-                color: var(--mut);
+                transition: border 0.15s;
             }
             .inp:focus {
                 border-color: var(--grn);
-                box-shadow: 0 0 0 3px #5b8fff22;
-            }
-            .pw-wrap {
-                position: relative;
-            }
-            .pw-toggle {
-                position: absolute;
-                right: 0;
-                top: 0;
-                bottom: 0;
-                width: 42px;
-                background: none;
-                border: none;
-                color: var(--mut);
-                cursor: pointer;
-                display: grid;
-                place-items: center;
-                transition:
-                    color 0.2s ease,
-                    transform 0.2s ease;
-            }
-            .pw-toggle:hover {
-                color: var(--grn);
-            }
-            .pw-toggle svg {
-                width: 18px;
-                height: 18px;
-                position: absolute;
-                transition:
-                    opacity 0.22s ease,
-                    transform 0.22s ease;
-            }
-            .pw-toggle .eye-open {
-                opacity: 0;
-                transform: scale(0.65) rotate(-18deg);
-            }
-            .pw-toggle.is-visible .eye-closed {
-                opacity: 0;
-                transform: scale(0.65) rotate(18deg);
-            }
-            .pw-toggle.is-visible .eye-open {
-                opacity: 1;
-                transform: scale(1) rotate(0);
             }
             select.inp {
                 cursor: pointer;
@@ -234,7 +136,6 @@
                 cursor: pointer;
                 font-family: inherit;
                 touch-action: manipulation;
-                box-shadow: 0 10px 24px #1a3f9e52;
             }
             .btn-g {
                 width: 100%;
@@ -288,14 +189,6 @@
                 cursor: pointer;
                 font-family: inherit;
                 touch-action: manipulation;
-            }
-            .btn-p:hover,
-            .btn-g:hover,
-            .btn-a:hover,
-            .btn-s:hover,
-            .btn-d:hover {
-                border-color: var(--bor2);
-                box-shadow: 0 10px 28px #0000003a;
             }
             .divider {
                 display: flex;
@@ -396,11 +289,6 @@
                 gap: 10px;
                 padding: 10px 14px 12px;
                 border-bottom: 1px solid var(--bor);
-                position: sticky;
-                top: 0;
-                z-index: 20;
-                background: rgba(9, 9, 31, 0.72);
-                backdrop-filter: blur(12px);
             }
             #topbar h2 {
                 font-size: 19px;
@@ -432,14 +320,50 @@
                 }
                 #main {
                     margin-left: 0;
-                    padding: 13px;
+                    padding: 13px 13px 80px;
                 }
                 #ham {
                     display: block;
                 }
+                #bot-nav {
+                    display: flex !important;
+                }
                 .hide-mob {
                     display: none !important;
                 }
+            }
+            #bot-nav {
+                display: none;
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: var(--sur);
+                border-top: 1px solid var(--bor);
+                z-index: 100;
+                padding: 5px 0 7px;
+            }
+            .bn {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 2px;
+                padding: 5px 3px;
+                cursor: pointer;
+                color: var(--mut);
+                font-size: 9px;
+                font-weight: 700;
+                border: none;
+                background: none;
+                font-family: inherit;
+                touch-action: manipulation;
+            }
+            .bn.active {
+                color: var(--grn);
+            }
+            .bn .bi {
+                font-size: 18px;
             }
             #overlay {
                 display: none;
@@ -454,21 +378,18 @@
                 border: 1px solid var(--bor);
                 border-radius: 14px;
                 padding: 18px;
-                box-shadow: 0 8px 24px #00000028;
             }
             .sc {
                 background: var(--s2);
                 border: 1px solid var(--bor);
                 border-radius: 12px;
                 padding: 14px;
-                box-shadow: inset 0 1px 0 #ffffff05;
             }
             .hero {
                 background: linear-gradient(135deg, var(--gdm), #0d1424);
                 border: 1px solid var(--gbr);
                 border-radius: 16px;
                 padding: 22px 26px;
-                box-shadow: 0 16px 40px #00000038;
             }
             .g2 {
                 display: grid;
@@ -517,18 +438,11 @@
                 color: var(--mut);
                 font-family: inherit;
                 touch-action: manipulation;
-                transition:
-                    border-color 0.2s ease,
-                    color 0.2s ease,
-                    transform 0.14s ease;
             }
             .tab.active {
                 background: var(--gdm);
                 border-color: var(--gbr);
                 color: var(--grn);
-            }
-            .tab:hover {
-                border-color: var(--bor2);
             }
             .bdg {
                 display: inline-flex;
@@ -791,329 +705,191 @@
             }
 
             /* ═══════════════════════════════════════
-               LIGHT MODE — Editorial Ivory
-            ═══════════════════════════════════════ */
+   LIGHT MODE — Premium White
+═══════════════════════════════════════ */
             body.light {
-                --bg: #ffffff;
-                --sur: rgba(247, 250, 255, 0.92);
-                --s2: #e9f1ff;
-                --bor: #c9d9f3;
-                --bor2: #93b7ea;
-                --txt: #1f1a17;
-                --mut: #5d6b86;
-                --mut2: #72819d;
-                --grn: #2563eb;
-                --grn2: #1d4ed8;
-                --gdm: #e7f0ff;
-                --gbr: #cdddfb;
-                --gold: #2f6feb;
-                --purple: #4f46e5;
-                --red: #c63d52;
-                --teal: #0f766e;
-                --green: #1f7a4f;
-                --orange: #c85b1e;
-                --amber: #2f6feb;
-                --pending: #2f6feb;
-            }
-            body.light::before {
-                background:
-                    radial-gradient(
-                        circle at 12% 12%,
-                        rgba(37, 99, 235, 0.16) 0,
-                        transparent 34%
-                    ),
-                    radial-gradient(
-                        circle at 88% 14%,
-                        rgba(79, 70, 229, 0.14) 0,
-                        transparent 32%
-                    ),
-                    radial-gradient(
-                        circle at 50% 95%,
-                        rgba(37, 99, 235, 0.1) 0,
-                        transparent 36%
-                    );
-                opacity: 1;
+                --bg: #f4f5ff;
+                --sur: #ffffff;
+                --s2: #eceeff;
+                --bor: #d0d5f5;
+                --bor2: #9aa5e8;
+                --txt: #080d30;
+                --mut: #4a52a0;
+                --mut2: #303880;
+                --grn: #1a52d8; /* strong indigo — visible on white */
+                --grn2: #103ab0;
+                --gdm: #e8ecff;
+                --gbr: #c0caee;
+                --gold: #9a6200; /* dark amber */
+                --purple: #6622b8; /* dark violet */
+                --red: #cc1122; /* clean red */
+                --teal: #006e80; /* dark teal */
+                --green: #147040; /* dark emerald */
+                --orange: #c03800; /* dark orange */
+                --amber: #9a6200;
+                --pending: #c03800;
             }
             body.light body,
-            body.light #main,
-            body.light #pg-app {
-                background: transparent;
-            }
-            body.light #pg-login,
-            body.light #pg-invite {
-                background:
-                    radial-gradient(
-                        ellipse at 20% 15%,
-                        rgba(37, 99, 235, 0.12),
-                        transparent 38%
-                    ),
-                    radial-gradient(
-                        ellipse at 82% 18%,
-                        rgba(79, 70, 229, 0.12),
-                        transparent 36%
-                    ),
-                    linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
-            }
-            body.light #pg-loading {
-                background: linear-gradient(
-                    160deg,
-                    #ffffff 0%,
-                    #f3f8ff 100%
-                ) !important;
-            }
-            body.light #load-glow {
-                background: radial-gradient(
-                    circle,
-                    rgba(37, 99, 235, 0.14) 0,
-                    transparent 70%
-                ) !important;
-            }
-            body.light #load-logo {
-                background: linear-gradient(
-                    135deg,
-                    #2563eb,
-                    #4f46e5
-                ) !important;
-                border-color: rgba(37, 99, 235, 0.18) !important;
-                color: #fff !important;
-                box-shadow: 0 18px 50px rgba(37, 99, 235, 0.16) !important;
-            }
-            body.light #load-bar {
-                background: linear-gradient(90deg, #2563eb, #4f46e5) !important;
-            }
-            body.light #load-msg {
-                color: var(--mut) !important;
+            body.light #main {
+                background: var(--bg);
             }
             body.light #sidebar {
-                background: rgba(247, 250, 255, 0.92);
-                border-right: 1px solid var(--bor);
-                box-shadow: 8px 0 40px rgba(37, 99, 235, 0.08);
-                backdrop-filter: blur(18px);
-            }
-            body.light .nav-logo {
-                border-bottom-color: var(--bor);
-            }
-            body.light .nav-logo .logo {
-                background: linear-gradient(135deg, #2563eb, #4f46e5);
-                color: #fff;
-                box-shadow: 0 12px 26px rgba(37, 99, 235, 0.18);
-            }
-            body.light .nav-item:hover {
-                background: rgba(37, 99, 235, 0.08);
-                color: var(--txt);
-            }
-            body.light .nav-item.active {
-                background: rgba(37, 99, 235, 0.12);
-                color: var(--grn);
-                border-left-color: var(--grn);
-            }
-            body.light #main {
-                color: var(--txt);
+                background: #ffffff;
+                border-right: 1px solid #d0d5f5;
+                box-shadow: 6px 0 28px rgba(26, 82, 216, 0.06);
             }
             body.light #topbar {
-                background: rgba(255, 255, 255, 0.86);
-                border-bottom-color: var(--bor);
-                backdrop-filter: blur(16px);
-                box-shadow: 0 12px 28px rgba(37, 99, 235, 0.04);
+                background: rgba(244, 245, 255, 0.95);
+                border-bottom-color: #d0d5f5;
+                backdrop-filter: blur(14px);
             }
-            body.light #topbar h2 {
-                color: var(--txt);
+            body.light #bot-nav {
+                background: #fff;
+                border-top: 1px solid #d0d5f5;
+                box-shadow: 0 -4px 20px rgba(26, 82, 216, 0.05);
             }
             body.light #overlay {
-                background: rgba(32, 25, 20, 0.22);
+                background: rgba(0, 0, 0, 0.28);
             }
             body.light .card {
-                background: rgba(247, 250, 255, 0.95);
-                border-color: var(--bor);
-                box-shadow: 0 16px 40px rgba(37, 99, 235, 0.08);
-                backdrop-filter: blur(10px);
-            }
-            body.light .sc {
-                background: #edf4ff;
-                border-color: var(--bor);
+                background: #fff;
+                border-color: #d0d5f5;
+                box-shadow: 0 2px 16px rgba(26, 82, 216, 0.06);
             }
             body.light .hero {
-                background: linear-gradient(135deg, #ffffff 0%, #eef5ff 100%);
-                border-color: var(--bor);
-                box-shadow: 0 18px 44px rgba(37, 99, 235, 0.08);
+                background: linear-gradient(135deg, #e8ecff, #f4f5ff);
+                border-color: #d0d5f5;
             }
             body.light .stat-box {
-                background: linear-gradient(180deg, #ffffff 0%, #edf4ff 100%);
-                border-color: var(--bor);
-                box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+                background: #eceeff;
+                border-color: #d0d5f5;
             }
             body.light .lbox {
-                background: rgba(255, 255, 255, 0.92);
-                border-color: rgba(223, 211, 196, 0.78);
-                box-shadow: 0 28px 70px rgba(37, 99, 235, 0.12);
-                backdrop-filter: blur(16px);
+                background: #fff;
+                box-shadow: 0 16px 48px rgba(0, 0, 0, 0.14);
             }
             body.light .modal-box {
-                background: #ffffff;
-                border-color: var(--bor);
-                box-shadow: 0 30px 90px rgba(37, 99, 235, 0.18);
+                background: #fff;
+                border-color: #d0d5f5;
+                box-shadow: 0 24px 80px rgba(0, 0, 0, 0.18);
             }
             body.light .modal-bg {
-                background: rgba(33, 44, 63, 0.34);
-                backdrop-filter: blur(5px);
+                background: rgba(0, 0, 0, 0.36);
             }
             body.light .inp {
-                background: #f4f8ff;
-                border-color: var(--bor);
-                color: var(--txt);
-            }
-            body.light .inp::placeholder {
-                color: #93887b;
+                background: #eceeff;
+                border-color: #d0d5f5;
+                color: #080d30;
             }
             body.light .inp:focus {
-                border-color: var(--grn);
-                box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+                border-color: #1a52d8;
+                box-shadow: 0 0 0 3px rgba(26, 82, 216, 0.12);
                 outline: none;
             }
             body.light .btn-p {
-                background: linear-gradient(135deg, #2563eb, #4f46e5);
+                background: linear-gradient(135deg, #1a52d8, #6622b8);
                 color: #fff;
                 border: none;
-                box-shadow: 0 16px 30px rgba(37, 99, 235, 0.18);
             }
             body.light .btn-a {
-                background: #2563eb;
+                background: #1a52d8;
                 color: #fff;
-                border-color: #2563eb;
+                border-color: #1a52d8;
             }
             body.light .btn-s {
-                background: #edf4ff;
-                border-color: var(--bor);
-                color: var(--txt);
+                background: #eceeff;
+                border-color: #d0d5f5;
+                color: #1a52d8;
             }
             body.light .btn-d {
-                background: #eef4ff;
-                border-color: #c6d7fb;
-                color: #c63d52;
+                background: #fff1f1;
+                border-color: #f5b5b5;
+                color: #cc1122;
             }
             body.light .btn-g {
-                background: rgba(247, 250, 255, 0.9);
-                border: 1px solid var(--bor);
-                color: var(--txt);
-            }
-            body.light .divider::before,
-            body.light .divider::after {
-                background: var(--bor);
-            }
-            body.light .err {
-                background: #eef4ff;
-                border-color: #c6d7fb;
-                color: #1d4ed8;
+                background: #fff;
+                border: 1px solid #d0d5f5;
+                color: #080d30;
             }
             body.light .tbl thead tr {
-                background: #edf4ff;
+                background: #e8ecff;
             }
             body.light .tbl th {
-                color: var(--txt);
+                color: #080d30;
                 font-weight: 800;
             }
             body.light .tbl td {
-                border-bottom-color: #dbe5f7;
+                border-bottom-color: #e0e4f8;
             }
             body.light .tbl tr:hover {
-                background: #f4f8ff;
+                background: #f0f2ff;
             }
             body.light .tab-row {
-                border-color: var(--bor);
+                border-color: #d0d5f5;
             }
-            body.light .tab,
-            body.light .proj-tab {
-                background: rgba(247, 250, 255, 0.9);
-                border-color: var(--bor);
-                color: var(--mut);
+            body.light .tab {
+                color: #4a52a0;
             }
-            body.light .tab.active,
-            body.light .proj-tab.active {
-                background: rgba(37, 99, 235, 0.1);
-                color: var(--grn);
-                border-color: rgba(37, 99, 235, 0.2);
+            body.light .tab.active {
+                color: #1a52d8;
+                border-bottom-color: #1a52d8;
             }
             body.light .proj-tab-bar {
-                border-color: var(--bor);
+                border-color: #d0d5f5;
+            }
+            body.light .proj-tab {
+                color: #4a52a0;
+            }
+            body.light .proj-tab.active {
+                color: #1a52d8;
+                border-bottom-color: #1a52d8;
             }
             body.light .proj-card {
-                background: rgba(255, 255, 255, 0.84);
-                border-color: var(--bor);
-                box-shadow: 0 14px 34px rgba(44, 35, 28, 0.08);
+                background: #fff;
+                border-color: #d0d5f5;
+                box-shadow: 0 2px 12px rgba(26, 82, 216, 0.06);
             }
             body.light .proj-card:hover {
-                border-color: #b5a38f;
-                transform: translateY(-3px);
-                box-shadow: 0 22px 48px rgba(44, 35, 28, 0.12);
+                border-color: #9aa5e8;
+                box-shadow: 0 6px 24px rgba(26, 82, 216, 0.1);
             }
             body.light .si {
-                color: var(--mut);
+                color: #4a52a0;
+            }
+            body.light .bn {
+                color: #4a52a0;
+            }
+            body.light .bn.active {
+                color: #1a52d8;
             }
             body.light #toast {
-                background: #1f1a17;
+                background: #080d30;
                 color: #fff;
-                box-shadow: 0 16px 36px rgba(31, 26, 23, 0.22);
             }
             body.light #prof-drop {
-                background: rgba(255, 255, 255, 0.95);
-                border-color: var(--bor);
-                box-shadow: 0 18px 42px rgba(44, 35, 28, 0.12);
+                background: #fff;
+                border-color: #d0d5f5;
+                box-shadow: 0 12px 40px rgba(0, 0, 0, 0.14);
             }
             body.light #theme-btn {
-                background: #f4ede4;
-                border-color: var(--bor);
-                color: var(--grn);
+                background: #eceeff;
+                border-color: #d0d5f5;
+                color: #1a52d8;
             }
             body.light #ham {
-                background: rgba(255, 255, 255, 0.85);
-                border-color: var(--bor);
-                color: var(--txt);
+                color: #080d30;
             }
             body.light .bdg {
-                background: rgba(15, 118, 110, 0.08);
-                color: var(--grn);
-                border: 1px solid rgba(15, 118, 110, 0.14);
+                border-color: #d0d5f5;
             }
             body.light .sw::-webkit-scrollbar-track {
-                background: #f1ebe3;
+                background: #eceeff;
             }
             body.light .sw::-webkit-scrollbar-thumb {
-                background: #bcae9d;
+                background: #b0bae8;
             }
-            body.light .live {
-                background: var(--grn);
-                box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.12);
-            }
-            body.light .pbar {
-                background: #ece3d7;
-            }
-            body.light .pfill {
-                background: linear-gradient(90deg, #0f766e, #5b4bd6);
-            }
-            body.light .pb-row,
-            body.light .col-row {
-                border-bottom-color: #e7ddd1;
-            }
-            body.light .nav-div {
-                background: linear-gradient(
-                    90deg,
-                    transparent,
-                    var(--bor),
-                    transparent
-                );
-            }
-            body.light [style*="#1a040688"],
-            body.light [style*="#1a0e0488"] {
-                background: #fff4ef !important;
-                border-color: #efc7b6 !important;
-                color: #c85b1e !important;
-                box-shadow: none !important;
-            }
-            body.light [style*="#071a0f"],
-            body.light [style*="#25d366"] {
-                background: rgba(15, 118, 110, 0.1) !important;
-                border-color: rgba(15, 118, 110, 0.22) !important;
-                color: var(--grn) !important;
+            body.light #topbar h2 {
+                color: #080d30;
             }
 
             .nav-div {
@@ -1297,7 +1073,7 @@
                         INVEST · GROW · PROSPER
                     </div>
                 </div>
-                <button class="btn-g" onclick="gLogin()">
+                <button class="btn-g" onclick="doGoogleLogin()">
                     <svg width="16" height="16" viewBox="0 0 18 18">
                         <path
                             fill="#4285F4"
@@ -1381,7 +1157,7 @@
                             </button>
                         </div>
                     </div>
-                    <button class="btn-p" onclick="eLogin()">Login →</button>
+                    <button class="btn-p" onclick="doLogin()">Login →</button>
                     <div
                         style="
                             display: flex;
@@ -1772,6 +1548,7 @@
                 <div id="content"></div>
                 <div id="modal"></div>
             </div>
+            <div id="bot-nav"></div>
         </div>
         <div id="toast"></div>
 
@@ -2197,11 +1974,12 @@
                 _mo: {},
                 _invTab: "overview",
                 _fTab: "payments",
+                _loadIv: null,
             };
             var TITLES = {
                 dashboard: "Dashboard",
-                payments: "Finance",
-                finance: "Finance",
+                payments: "Monthly Payments",
+                finance: "Monthly Payments",
                 investments: "Projects",
                 members: "Members",
                 activity: "Audit Trail",
@@ -2363,7 +2141,10 @@
             function getMem(email) {
                 return (
                     S.mems.find(function (m) {
-                        return m.email === email;
+                        return (
+                            (m.email || "").toLowerCase() ===
+                            (email || "").toLowerCase()
+                        );
                     }) || {}
                 );
             }
@@ -2442,11 +2223,7 @@
                 return me && me.permissions && me.permissions.sendReminders;
             }
             function canManageProj() {
-                if (S.role === "admin" || S.role === "finance") return true;
-                var me = S.mems.find(function (m) {
-                    return m.email === S.email;
-                });
-                return me && me.permissions && me.permissions.manageProjects;
+                return S.role === "admin" || S.role === "finance";
             }
             function isProjectManager(inv) {
                 if (S.role === "admin") return true;
@@ -2482,16 +2259,11 @@
                 window.location.href = "/auth/google/redirect";
             }
 
-            function togglePw(btn, inputId) {
-                var i = $(inputId);
-                if (!i) return;
-                var visible = i.type === "password";
-                i.type = visible ? "text" : "password";
-                if (btn && btn.classList)
-                    btn.classList.toggle("is-visible", visible);
+            function doGoogleLogin() {
+                return gLogin();
             }
 
-            async function eLogin() {
+            async function doLogin() {
                 var em = ($("em") || { value: "" }).value.trim().toLowerCase();
                 var pw = ($("pw") || { value: "" }).value;
                 if (!em || !pw) {
@@ -2504,14 +2276,12 @@
                 if (!res || res.error) {
                     showErr(
                         "lerr",
-                        res?.message ||
-                            res?.error ||
+                        (res && (res.message || res.error)) ||
                             "Login failed. Try again.",
                     );
                     return;
                 }
 
-                // Store token and user data (API returns `member`)
                 AUTH_TOKEN = res.token;
                 CURRENT_USER = res.member || res.user || null;
                 localStorage.setItem("auth_token", AUTH_TOKEN);
@@ -2530,13 +2300,25 @@
                     localStorage.removeItem("sipr_member");
                 }
 
-                // Set UI state
-                S.email = CURRENT_USER?.email || "";
-                S.name = CURRENT_USER?.name || "";
-                S.role = CURRENT_USER?.role || "member";
-                S.uid = CURRENT_USER?.id || "";
+                S.email = (CURRENT_USER && CURRENT_USER.email) || "";
+                S.name = (CURRENT_USER && CURRENT_USER.name) || "";
+                S.role = (CURRENT_USER && CURRENT_USER.role) || "member";
+                S.uid = (CURRENT_USER && CURRENT_USER.id) || "";
 
                 initApp();
+            }
+
+            function eLogin() {
+                return doLogin();
+            }
+
+            function togglePw(btn, inputId) {
+                var i = $(inputId);
+                if (!i) return;
+                var visible = i.type === "password";
+                i.type = visible ? "text" : "password";
+                if (btn && btn.classList)
+                    btn.classList.toggle("is-visible", visible);
             }
 
             function fPass() {
@@ -2715,6 +2497,7 @@
 
             async function doLogout() {
                 await API.logout();
+                doneLoading();
                 AUTH_TOKEN = null;
                 CURRENT_USER = null;
                 localStorage.removeItem("auth_token");
@@ -2732,7 +2515,6 @@
                 $("pg-app").style.display = "none";
                 $("pg-login").style.display = "flex";
                 $("pg-invite").style.display = "none";
-                toast("Logged out");
             }
 
             function changePwModal() {
@@ -2775,54 +2557,21 @@
             })();
 
             var _authResolved = false;
-            async function handleAuthUser() {
-                if (_authResolved) return;
 
-                // Check for stored token
-                if (!AUTH_TOKEN || !CURRENT_USER) {
-                    $("pg-app").style.display = "none";
-                    $("pg-login").style.display = "flex";
-                    $("pg-invite").style.display = "none";
-                    doneLoading();
-                    _authResolved = true;
-                    return;
-                }
-
-                _authResolved = true;
-                loadMembers(function () {
-                    var mem = S.mems.find(function (m) {
-                        return (
-                            m.id === CURRENT_USER.id ||
-                            m.email === CURRENT_USER.email
-                        );
-                    });
-                    if (mem) {
-                        S.email = mem.email;
-                        S.name = mem.name || CURRENT_USER.name;
-                        S.uid = mem.id;
-                        S.role = mem.role || "member";
-                        $("pg-login").style.display = "none";
-                        $("pg-invite").style.display = "none";
-                        initApp();
-                    } else {
-                        $("pg-app").style.display = "none";
-                        $("pg-login").style.display = "flex";
-                        doneLoading();
-                    }
-                });
-            }
-
-            // Handle OAuth redirect callback (from Laravel)
-            (async function checkOAuthCallback() {
-                // Check URL hash first (Laravel default)
-                const hash = window.location.hash.substring(1);
-                let token = null,
-                    user = null;
+            function handleGoogleRedirect() {
+                var hash = window.location.hash
+                    ? window.location.hash.substring(1)
+                    : "";
+                var token = null;
+                var user = null;
 
                 if (hash) {
-                    const params = new URLSearchParams(hash);
-                    token = params.get("google-token");
-                    const memberJson = params.get("member");
+                    var hashParams = new URLSearchParams(hash);
+                    token =
+                        hashParams.get("token") ||
+                        hashParams.get("auth_token") ||
+                        hashParams.get("google-token");
+                    var memberJson = hashParams.get("member");
                     if (memberJson) {
                         try {
                             user = JSON.parse(decodeURIComponent(memberJson));
@@ -2830,67 +2579,130 @@
                     }
                 }
 
-                // Fallback: check query params
-                if (!token) {
-                    const params = new URLSearchParams(window.location.search);
-                    token = params.get("token");
-                    if (params.get("user")) {
-                        try {
-                            user = JSON.parse(atob(params.get("user")));
-                        } catch (e) {}
-                    }
+                var queryParams = new URLSearchParams(window.location.search);
+                token =
+                    token ||
+                    queryParams.get("token") ||
+                    queryParams.get("auth_token") ||
+                    queryParams.get("google-token");
+                if (!user && queryParams.get("user")) {
+                    try {
+                        user = JSON.parse(atob(queryParams.get("user")));
+                    } catch (e) {}
                 }
 
-                if (token && user) {
-                    AUTH_TOKEN = token;
+                if (!token) return false;
+
+                AUTH_TOKEN = token;
+                localStorage.setItem("auth_token", AUTH_TOKEN);
+                localStorage.setItem("sipr_token", AUTH_TOKEN);
+                if (user) {
                     CURRENT_USER = user;
-                    localStorage.setItem("auth_token", AUTH_TOKEN);
-                    localStorage.setItem("sipr_token", AUTH_TOKEN);
-                    if (CURRENT_USER) {
+                    localStorage.setItem("current_user", JSON.stringify(user));
+                    localStorage.setItem("sipr_member", JSON.stringify(user));
+                }
+                window.history.replaceState(
+                    {},
+                    document.title,
+                    window.location.pathname,
+                );
+                return true;
+            }
+
+            async function loadAllData() {
+                const [membersRes, txsRes, invsRes] = await Promise.all([
+                    API.getMembers(),
+                    API.getTransactions(),
+                    API.getProjects(),
+                ]);
+
+                S.mems =
+                    (membersRes && membersRes.data && membersRes.data.length
+                        ? membersRes.data
+                        : DEF_MEMS.slice()) || DEF_MEMS.slice();
+                S.txs = ((txsRes && txsRes.data) || []).sort(function (a, b) {
+                    return new Date(b.date) - new Date(a.date);
+                });
+                S.invs = (invsRes && invsRes.data) || [];
+                try {
+                    loadNotice();
+                } catch (e) {}
+                try {
+                    loadDocs();
+                } catch (e) {}
+                try {
+                    loadActivity();
+                } catch (e) {}
+            }
+
+            async function bootstrapApp() {
+                doneLoading();
+                if (_authResolved) return;
+                _authResolved = true;
+                try {
+                    await loadAllData();
+                } catch (e) {
+                    S.mems =
+                        S.mems && S.mems.length ? S.mems : DEF_MEMS.slice();
+                }
+                initApp();
+            }
+
+            function bootApp() {
+                return bootstrapApp();
+            }
+
+            async function handleAuthUser() {
+                return bootstrapApp();
+            }
+
+            (async function bootstrapAuth() {
+                handleGoogleRedirect();
+
+                var token =
+                    AUTH_TOKEN ||
+                    localStorage.getItem("auth_token") ||
+                    localStorage.getItem("sipr_token");
+
+                if (!token) {
+                    $("pg-app").style.display = "none";
+                    $("pg-login").style.display = "flex";
+                    $("pg-invite").style.display = "none";
+                    doneLoading();
+                    return;
+                }
+
+                try {
+                    const me = await apiCall("/me");
+                    const meUser =
+                        me && (me.data || me.member || me.user || me);
+                    if (meUser) {
+                        CURRENT_USER = meUser;
                         localStorage.setItem(
                             "current_user",
-                            JSON.stringify(CURRENT_USER),
+                            JSON.stringify(meUser),
                         );
                         localStorage.setItem(
                             "sipr_member",
-                            JSON.stringify(CURRENT_USER),
+                            JSON.stringify(meUser),
                         );
-                    } else {
-                        localStorage.removeItem("current_user");
-                        localStorage.removeItem("sipr_member");
                     }
-                    // Clear URL and reload
-                    window.history.replaceState(
-                        {},
-                        document.title,
-                        window.location.pathname,
-                    );
-                    setTimeout(function () {
-                        location.reload();
-                    }, 100);
+                } catch (e) {
+                    AUTH_TOKEN = null;
+                    CURRENT_USER = null;
+                    localStorage.removeItem("auth_token");
+                    localStorage.removeItem("sipr_token");
+                    localStorage.removeItem("current_user");
+                    localStorage.removeItem("sipr_member");
+                    $("pg-app").style.display = "none";
+                    $("pg-login").style.display = "flex";
+                    $("pg-invite").style.display = "none";
+                    doneLoading();
                     return;
                 }
 
-                // Check for errors
-                const errorParam = new URLSearchParams(
-                    window.location.search,
-                ).get("error");
-                if (errorParam) {
-                    setTimeout(function () {
-                        showErr("lerr", "Google login failed: " + errorParam);
-                        doneLoading();
-                    }, 500);
-                    window.history.replaceState(
-                        {},
-                        document.title,
-                        window.location.pathname,
-                    );
-                    return;
-                }
+                await bootstrapApp();
             })();
-
-            // Check for stored auth on page load
-            handleAuthUser();
 
             // ═══════════ DATA ═══════════
             async function loadMembers(cb) {
@@ -3018,7 +2830,10 @@
                 setTimeout(function () {
                     var ls = $("pg-loading");
                     if (!ls || ls.style.display === "none") return; // already moved on
-                    var token = localStorage.getItem("token");
+                    var token =
+                        AUTH_TOKEN ||
+                        localStorage.getItem("auth_token") ||
+                        localStorage.getItem("sipr_token");
                     if (!token) {
                         // No user logged in — safe to show login
                         ls.style.display = "none";
@@ -3086,7 +2901,8 @@
             }
             function buildNav() {
                 var ni = $("nav-items");
-                if (!ni) return;
+                var bn = $("bot-nav");
+                if (!ni || !bn) return;
                 var vis = NAVS.filter(function (n) {
                     return !n.adm || isAdmin();
                 });
@@ -3113,6 +2929,57 @@
                         "</span></div>";
                 });
                 ni.innerHTML = html;
+                var secPages = [
+                    "finance",
+                    "wallet",
+                    "noticeboard",
+                    "expenses",
+                    "documents",
+                    "activity",
+                    "goals",
+                    "about",
+                    "control",
+                    "payments",
+                    "transactions",
+                ];
+                var isSecondary =
+                    secPages.indexOf(S.tab) >= 0 || !!S.activeProj;
+                bn.style.display = isSecondary ? "none" : "flex";
+                if (isSecondary) return;
+                var bnItems = [
+                    { id: "dashboard", ic: "⬡", lb: "Dashboard" },
+                    { id: "investments", ic: "📈", lb: "Projects" },
+                    { id: "members", ic: "○", lb: "Members" },
+                    { id: "_menu", ic: "≡", lb: "Menu" },
+                ];
+                bn.innerHTML = bnItems
+                    .map(function (item) {
+                        var act = S.tab === item.id;
+                        var onclick =
+                            item.id === "_menu"
+                                ? "moreMenu()"
+                                : "goPage(this.dataset.bid)";
+                        return (
+                            "<button class='bn" +
+                            (act ? " active" : "") +
+                            "' data-bid='" +
+                            item.id +
+                            "' onclick='" +
+                            onclick +
+                            "'>" +
+                            "<span style='font-size:18px;line-height:1'>" +
+                            item.ic +
+                            "</span>" +
+                            "<span>" +
+                            item.lb +
+                            "</span>" +
+                            (act
+                                ? "<div style='width:16px;height:2px;border-radius:99px;background:var(--grn);margin-top:1px'></div>"
+                                : "") +
+                            "</button>"
+                        );
+                    })
+                    .join("");
             }
 
             function setLabels() {
@@ -3306,7 +3173,8 @@
                                 "padding:7px 14px;border-radius:20px;border:1px solid var(--bor);background:var(--s2);cursor:pointer;font-size:13px;font-weight:700;color:var(--txt);font-family:inherit;";
                             hb.onclick = function () {
                                 if (S.activeProj) {
-                                    backToProjects();
+                                    S.activeProj = null;
+                                    goPage("investments");
                                 } else {
                                     goPage("dashboard");
                                 }
@@ -7695,18 +7563,27 @@
 
             // ═══════════ WALLET / PASSBOOK ═══════════
             function pWallet() {
-                var w = getMyWallet(),
-                    me = getMem(S.email);
+                var me = getMem(S.email);
+                if (!me || !me.id) return;
+
                 var myTxs = S.txs.filter(function (t) {
-                    return txMatch(t, me);
+                    return t.member_id === me.id || t.memberUID === me.id;
                 });
-                var totalDep = myTxs
-                    .filter(function (t) {
-                        return t.type === "deposit";
-                    })
-                    .reduce(function (s, t) {
-                        return s + Number(t.amount);
-                    }, 0);
+                var avail =
+                    myTxs
+                        .filter(function (t) {
+                            return t.type === "deposit" || t.type === "profit";
+                        })
+                        .reduce(function (s, t) {
+                            return s + Number(t.amount || 0);
+                        }, 0) -
+                    myTxs
+                        .filter(function (t) {
+                            return t.type === "fine";
+                        })
+                        .reduce(function (s, t) {
+                            return s + Number(t.amount || 0);
+                        }, 0);
                 var fines = myTxs
                     .filter(function (t) {
                         return t.type === "fine";
