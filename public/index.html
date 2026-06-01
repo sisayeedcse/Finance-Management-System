@@ -9236,15 +9236,7 @@
                     "<p style='font-size:13px;color:var(--mut);margin-top:3px'>Manage members, roles and permissions.</p></div>";
                 h +=
                     "<div id='ctrl-pending'><div class='card' style='border-color:var(--gold)44;margin-bottom:0'><div style='color:var(--gold);font-size:11px;font-weight:700;margin-bottom:12px'>Loading pending registrations...</div></div></div>";
-                h += "<div class='card' style='border-color:var(--gold)22'>";
-                h +=
-                    "<div style='display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px'>";
-                h +=
-                    "<div><div style='color:var(--gold);font-size:11px;font-weight:700;margin-bottom:3px'>MEMBER DATA RESET</div>";
-                h +=
-                    "<div style='color:var(--mut);font-size:12px'>Restore member profiles from default list.</div></div>";
-                h +=
-                    "<button onclick='resetMembers()' style='padding:9px 15px;border-radius:9px;border:1px solid var(--gold);background:#1c0e00;color:var(--gold);font-weight:700;font-size:12px;cursor:pointer;font-family:inherit'>Reset</button></div></div>";
+
                 S.mems.forEach(function (m) {
                     var role = m.role || "member";
                     var rc = RC[role] || RC.member;
