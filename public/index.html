@@ -4142,25 +4142,13 @@
                     h +=
                         "<div style='display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px'>";
                     h +=
-                        "<div style='display:flex;gap:5px;overflow-x:auto;scrollbar-width:none;flex:1'>";
-                    MF2.forEach(function (m, i) {
-                        var active = S.payM === i;
-                        h +=
-                            "<button onclick='S.payM=" +
-                            i +
-                            ";render()' style='padding:6px 12px;border-radius:20px;flex-shrink:0;border:1px solid " +
-                            (active ? "var(--grn)" : "var(--bor)") +
-                            ";background:" +
-                            (active ? "var(--grn)" : "var(--s2)") +
-                            ";color:" +
-                            (active ? "#fff" : "var(--mut)") +
-                            ";font-size:11px;font-weight:700;cursor:pointer;font-family:inherit'>" +
-                            m +
-                            "</button>";
-                    });
-                    h += "</div>";
+                        "<div style='display:flex;gap:6px;align-items:center'>";
                     h +=
-                        "<div style='display:flex;gap:6px;flex-shrink:0;align-items:center'>";
+                        "<select onchange='S.payM=Number(this.value);render()' style='padding:6px 10px;border-radius:9px;border:1px solid var(--bor);background:var(--s2);color:var(--txt);font-size:12px;font-family:inherit;font-weight:700;outline:none;cursor:pointer'>";
+                    MF2.forEach(function (m, i) {
+                        h += "<option value='" + i + "'" + (S.payM === i ? " selected" : "") + ">" + m + "</option>";
+                    });
+                    h += "</select>";
                     h +=
                         "<select onchange='S.payY=Number(this.value);render()' style='padding:6px 10px;border-radius:9px;border:1px solid var(--bor);background:var(--s2);color:var(--txt);font-size:12px;font-family:inherit;font-weight:700;outline:none;cursor:pointer'>";
                     for (
@@ -4175,6 +4163,9 @@
                             yr2 +
                             "</option>";
                     h += "</select>";
+                    h += "</div>";
+                    h +=
+                        "<div style='display:flex;gap:6px;flex-shrink:0;align-items:center'>";
                     h +=
                         "<button onclick='expPDF()' style='padding:7px 12px;border-radius:9px;border:1px solid var(--bor);background:var(--s2);color:var(--grn);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit'>📄 PDF</button>";
                     if (canWrite())
@@ -4445,11 +4436,16 @@
                         sign +
                         fmt(Number(tx.amount)) +
                         "</div>";
-                    if (isAdmin())
+                    if (isAdmin()) {
+                        h +=
+                            "<button onclick='openTx(this.dataset.tid)' data-tid='" +
+                            tx.id +
+                            "' style='padding:4px 8px;font-size:10px;flex-shrink:0;border-radius:6px;border:1px solid var(--bor);background:var(--s2);color:var(--mut);cursor:pointer;margin-right:4px;'>Edit</button>";
                         h +=
                             "<button onclick='delTx(this.dataset.tid)' data-tid='" +
                             tx.id +
                             "' class='btn-d' style='padding:4px 8px;font-size:10px;flex-shrink:0'>&#xD7;</button>";
+                    }
                     h += "</div>";
                 });
                 h += "</div>";
