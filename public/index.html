@@ -7304,7 +7304,7 @@
             function openTx(id, type) {
                 var t = id
                     ? S.txs.find(function (x) {
-                          return x.id === id;
+                          return String(x.id) === String(id);
                       })
                     : null;
                 var today = new Date().toISOString().split("T")[0];
@@ -7378,9 +7378,10 @@
                     "<div><label class='lbl'>Amount (BDT)</label><input id='tx-am' type='number' class='inp' value='" +
                     (t ? t.amount : "") +
                     "'/></div>";
+                var txDateStr = t && t.date ? String(t.date).substring(0, 10) : today;
                 h +=
                     "<div><label class='lbl'>Actual Date Paid</label><input id='tx-dt' type='date' class='inp' value='" +
-                    (t ? t.date : today) +
+                    txDateStr +
                     "'/></div>";
                 h += "</div>";
                 h +=

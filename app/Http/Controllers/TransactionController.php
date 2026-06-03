@@ -93,6 +93,26 @@ class TransactionController extends Controller
         ]);
 
         $transaction->update($request->only(['amount', 'note', 'date']));
+
+        if ($transaction->type === 'deposit' && $transaction->member_id) {
+            $paymentDate = $transaction->date ? new \DateTime($transaction->date) : new \DateTime();
+            $paymentMonth = $transaction->paymentForMonth ?? ((int) $paymentDate->format('n') - 1);
+            $paymentYear = $transaction->paymentForYear ?? (int) $paymentDate->format('Y');
+
+            Payment::updateOrCreate(
+                [
+                    'member_id' => $transaction->member_id,
+                    'month' => $paymentMonth,
+                    'year' => $paymentYear,
+                ],
+                [
+                    'amount' => $transaction->amount,
+                    'status' => 'paid',
+                    'paid_at' => $transaction->date,
+                ]
+            );
+        }
+
         ActivityService::log('update_transaction', "Updated transaction {$id}", $request->user()->id);
 
         return response()->json($transaction);
