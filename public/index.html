@@ -3375,113 +3375,6 @@
             }
 
             // ═══════════ GLOBAL SEARCH ═══════════
-            function openSearch() {
-                var h = "<div class='modal-bg' onclick='if(event.target===this)closeModal()' style='align-items:flex-start;padding-top:60px'>";
-                h += "<div style='background:var(--sur);border:1px solid var(--bor);border-radius:20px;width:100%;max-width:540px;overflow:hidden;box-shadow:0 24px 80px #00000088;animation:slideUp .2s cubic-bezier(.34,1.56,.64,1)'>";
-                // Search bar
-                h += "<div style='display:flex;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid var(--bor)'>";
-                h += "<span style='font-size:18px;color:var(--mut)'>🔎</span>";
-                h += "<input id='gs-input' type='text' placeholder='Search members, transactions, projects...' oninput='handleSearch()' onkeydown='handleSearchKey(event)' style='flex:1;background:none;border:none;outline:none;font-size:15px;color:var(--txt);font-family:inherit;font-weight:600' autofocus/>";
-                h += "<button onclick='closeModal()' style='background:none;border:none;color:var(--mut);font-size:18px;cursor:pointer;padding:4px'>✕</button>";
-                h += "</div>";
-                // Results container
-                h += "<div id='gs-results' style='max-height:420px;overflow-y:auto;padding:10px'>";
-                h += "<div style='text-align:center;padding:32px 20px;color:var(--mut)'>";
-                h += "<div style='font-size:36px;margin-bottom:8px;opacity:.4'>🔍</div>";
-                h += "<div style='font-size:13px;font-weight:600'>Start typing to search everything...</div>";
-                h += "<div style='font-size:11px;margin-top:4px;opacity:.6'>Members · Transactions · Projects</div>";
-                h += "</div></div>";
-                // Keyboard hint
-                h += "<div style='padding:8px 18px;border-top:1px solid var(--bor);display:flex;gap:16px'>";
-                h += "<span style='font-size:10px;color:var(--mut)'><kbd style='background:var(--s2);border:1px solid var(--bor);border-radius:4px;padding:1px 5px;font-size:9px'>↵</kbd> Navigate</span>";
-                h += "<span style='font-size:10px;color:var(--mut)'><kbd style='background:var(--s2);border:1px solid var(--bor);border-radius:4px;padding:1px 5px;font-size:9px'>Esc</kbd> Close</span>";
-                h += "</div>";
-                h += "</div></div>";
-                $("modal").innerHTML = h;
-                setTimeout(function() { var i = $("gs-input"); if (i) i.focus(); }, 80);
-            }
-
-            function handleSearchKey(e) {
-                if (e.key === "Escape") { closeModal(); return; }
-            }
-
-            function handleSearch() {
-                var q = ($("gs-input") || {value:""}).value.trim().toLowerCase();
-                var res = $("gs-results");
-                if (!res) return;
-
-                if (!q || q.length < 2) {
-                    res.innerHTML = "<div style='text-align:center;padding:32px 20px;color:var(--mut)'><div style='font-size:36px;margin-bottom:8px;opacity:.4'>🔍</div><div style='font-size:13px;font-weight:600'>Start typing to search everything...</div><div style='font-size:11px;margin-top:4px;opacity:.6'>Members · Transactions · Projects</div></div>";
-                    return;
-                }
-
-                var sections = [];
-
-                // ── Members ──
-                var mems = (S.mems || []).filter(function(m) {
-                    return (m.name||"").toLowerCase().includes(q) ||
-                           (m.email||"").toLowerCase().includes(q) ||
-                           (m.phone||"").toLowerCase().includes(q) ||
-                           (m.title||"").toLowerCase().includes(q);
-                }).slice(0, 5);
-                if (mems.length) {
-                    var mh = "<div style='padding:6px 8px;font-size:9px;color:var(--mut);font-weight:700;letter-spacing:1.5px;margin-top:4px'>MEMBERS</div>";
-                    mems.forEach(function(m) {
-                        var roleColor = {admin:"var(--red)",finance:"var(--gold)",secretary:"var(--teal)",member:"var(--mut)"}[m.role||"member"]||"var(--mut)";
-                        mh += "<div onclick='closeModal();goPage(\"members\")' style='display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;cursor:pointer;transition:background .12s' onmouseover=\"this.style.background='var(--s2)'\" onmouseout=\"this.style.background=''\">";
-                        mh += "<div style='width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--gdm),#1a2540);border:1px solid var(--gbr);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;color:var(--grn);flex-shrink:0'>" + (m.name||"?")[0].toUpperCase() + "</div>";
-                        mh += "<div style='flex:1;min-width:0'><div style='font-size:13px;font-weight:800'>" + m.name + "</div><div style='font-size:11px;color:" + roleColor + ";font-weight:600'>" + (m.role||"member") + " · " + (m.email||"") + "</div></div>";
-                        mh += "<span style='font-size:11px;color:var(--mut)'>→</span></div>";
-                    });
-                    sections.push(mh);
-                }
-
-                // ── Transactions ──
-                var txs = (S.txs || []).filter(function(t) {
-                    return (txName(t)||"").toLowerCase().includes(q) ||
-                           (t.note||"").toLowerCase().includes(q) ||
-                           (t.type||"").toLowerCase().includes(q) ||
-                           String(t.amount||"").includes(q);
-                }).slice(0, 5);
-                if (txs.length) {
-                    var th = "<div style='padding:6px 8px;font-size:9px;color:var(--mut);font-weight:700;letter-spacing:1.5px;margin-top:4px'>TRANSACTIONS</div>";
-                    txs.forEach(function(t) {
-                        var typeColor = {deposit:"var(--grn)",withdrawal:"var(--red)",expense:"var(--orange)",profit:"var(--gold)"}[t.type]||"var(--mut)";
-                        var tid = t.id;
-                        th += "<div onclick='closeModal();goPage(\"finance\")' style='display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;cursor:pointer;transition:background .12s' onmouseover=\"this.style.background='var(--s2)'\" onmouseout=\"this.style.background=''\">";
-                        th += "<div style='width:36px;height:36px;border-radius:10px;background:var(--s2);border:1px solid var(--bor);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0'>" + ({deposit:"💰",withdrawal:"💸",expense:"📉",profit:"📈"}[t.type]||"💳") + "</div>";
-                        th += "<div style='flex:1;min-width:0'><div style='font-size:13px;font-weight:800'>" + txName(t) + " <span style='color:" + typeColor + ";font-size:11px'>" + (t.type||"") + "</span></div>";
-                        th += "<div style='font-size:11px;color:var(--mut)'>" + (t.date||"") + (t.note ? " · " + t.note : "") + "</div></div>";
-                        th += "<span style='font-size:13px;font-weight:800;color:" + typeColor + "'>" + fmt(Number(t.amount||0)) + "</span></div>";
-                    });
-                    sections.push(th);
-                }
-
-                // ── Projects ──
-                var invs = (S.invs || []).filter(function(p) {
-                    return (p.name||"").toLowerCase().includes(q) ||
-                           (p.status||"").toLowerCase().includes(q) ||
-                           (p.projectManagerName||"").toLowerCase().includes(q);
-                }).slice(0, 4);
-                if (invs.length) {
-                    var ih = "<div style='padding:6px 8px;font-size:9px;color:var(--mut);font-weight:700;letter-spacing:1.5px;margin-top:4px'>PROJECTS</div>";
-                    invs.forEach(function(p) {
-                        var stColor = {active:"#4f8ef7",planning:"#fbbf24",completed:"#34d399",paused:"#9580c8",loss:"var(--orange)"}[p.status]||"#fbbf24";
-                        ih += "<div onclick='closeModal();openProject(\"" + p.id + "\")' style='display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;cursor:pointer;transition:background .12s' onmouseover=\"this.style.background='var(--s2)'\" onmouseout=\"this.style.background=''\">";
-                        ih += "<div style='width:36px;height:36px;border-radius:10px;background:var(--s2);border:1px solid var(--bor);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0'>📁</div>";
-                        ih += "<div style='flex:1;min-width:0'><div style='font-size:13px;font-weight:800'>" + p.name + " <span style='background:" + stColor + "22;color:" + stColor + ";padding:1px 7px;border-radius:99px;font-size:10px;font-weight:700'>" + (p.status||"planning") + "</span></div>";
-                        ih += "<div style='font-size:11px;color:var(--mut)'>" + (p.projectManagerName ? "Manager: " + p.projectManagerName : "No manager") + " · " + fmt(Number(p.capitalDeployed||p.amount||0)) + "</div></div>";
-                        ih += "<span style='font-size:11px;color:var(--mut)'>→</span></div>";
-                    });
-                    sections.push(ih);
-                }
-
-                if (!sections.length) {
-                    res.innerHTML = "<div style='text-align:center;padding:32px 20px;color:var(--mut)'><div style='font-size:36px;margin-bottom:8px;opacity:.3'>🕵️</div><div style='font-size:14px;font-weight:700;margin-bottom:4px'>No results for \"" + q + "\"</div><div style='font-size:12px;opacity:.6'>Try a different keyword</div></div>";
-                } else {
-                    res.innerHTML = sections.join("<div style='height:1px;background:var(--bor);margin:4px 8px'></div>");
-                }
-            }
 
             function moreMenu() {
                 var vis = NAVS.filter(function (n) {
@@ -3610,13 +3503,17 @@
             function getMyWallet() {
                 var me = getMem(S.email);
                 if (!me || !me.id)
-                    return { available: 0, locked: 0, history: [] };
+                    return { available: 0, locked: 0, total: 0, history: [] };
+                // Find any stored wallet doc (salary, profit_share entries)
                 var w = S.wallets.find(function (x) {
                     return x.memberId === me.id;
                 }) || { available: 0, locked: 0, history: [] };
-                var today = new Date(),
-                    unlocked = 0,
-                    locked = 0;
+                // Compute deposits directly from the transaction ledger (always accurate)
+                var myDeposits = S.txs.filter(function (t) {
+                    return txMatch(t, me) && t.type === "deposit";
+                }).reduce(function (s, t) { return s + Number(t.amount || 0); }, 0);
+                // Unlock any salary entries whose unlock date has passed
+                var today = new Date(), unlocked = 0, locked = 0;
                 (w.history || []).forEach(function (e) {
                     if (e.type === "salary" && e.locked) {
                         if (e.unlockDate && today >= new Date(e.unlockDate))
@@ -3624,9 +3521,12 @@
                         else locked += Number(e.amount);
                     }
                 });
+                // Wallet available = member's own deposits + any unlocked salary
+                var available = myDeposits + unlocked;
                 return {
-                    available: Number(w.available || 0) + unlocked,
+                    available: available,
                     locked: locked,
+                    total: available + locked,
                     history: w.history || [],
                     docId: w.id,
                 };
@@ -3770,7 +3670,19 @@
                 var dom = new Date().getDate();
                 var isOD = dom > 10 && up.length > 0;
                 var GOAL = 100000;
-                var gPct = Math.min(Math.round((s.f / GOAL) * 100), 100);
+                // Live project net P&L across all projects
+                var projNetPL = S.invs.reduce(function(s, inv) {
+                    return s + calcProjectStats(inv).pl;
+                }, 0);
+                // Combined net worth = fund balance (from transactions) + project net P&L
+                var netWorth = s.f + projNetPL;
+                // Available cash = fund ledger + project net income (revenue - expenses only, not capital)
+                // This is liquid cash: what's left after all operational costs across projects
+                var availableCash = s.f + S.invs.reduce(function(acc, inv) {
+                    var cs = calcProjectStats(inv);
+                    return acc + cs.revenue - cs.expense;
+                }, 0);
+                var gPct = Math.min(Math.round((netWorth / GOAL) * 100), 100);
                 var w = getMyWallet();
                 var ai = S.invs.filter(function (i) {
                     return i.status === "active";
@@ -3787,9 +3699,9 @@
                 h += "SIPR GROUP · NET WORTH</div>";
                 h +=
                     "<div id='dash-balance' data-val='" +
-                    s.f +
+                    netWorth +
                     "' style='font-size:32px;font-weight:900;letter-spacing:-1px;margin-bottom:4px'>" +
-                    fmt(s.f) +
+                    fmt(netWorth) +
                     "</div>";
                 h +=
                     "<div style='display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap'>";
@@ -3834,39 +3746,49 @@
                 h += "</div></div>";
 
                 // ── Quick actions ──
-                h +=
-                    "<div style='display:grid;grid-template-columns:repeat(4,1fr);gap:8px'>";
-                [
-                    { icon: "+", l: "Add Payment", tab: "finance" },
-                    { icon: "📁", l: "Projects", tab: "investments" },
-                    { icon: "🔎", l: "Search", tab: "search" },
-                    { icon: "🔍", l: "Audit", tab: "activity" },
-                ].forEach(function (a) {
-                    h +=
-                        "<div onclick='" + (a.tab === "__search__" ? "openSearch()" : "goPage(this.dataset.dt)") + "' data-dt='" +
-                        a.tab +
-                        "' style='background:var(--sur);border:1px solid var(--bor);border-radius:12px;padding:11px 6px;text-align:center;cursor:pointer;transition:border-color .2s,transform .15s' onmouseover=\"this.style.borderColor='var(--grn)';this.style.transform='translateY(-2px)'\" onmouseout=\"this.style.borderColor='var(--bor)';this.style.transform=''\">";
-                    h +=
-                        "<div style='font-size:20px;margin-bottom:4px'>" +
-                        a.icon +
-                        "</div>";
-                    h +=
-                        "<div style='font-size:9px;color:var(--mut);font-weight:700'>" +
-                        a.l +
-                        "</div></div>";
-                });
+                var _now = new Date();
+                // This month's profit from transactions
+                var mProfit = S.txs.filter(function(t) {
+                    var d = new Date(t.date);
+                    return t.type === "profit" &&
+                           d.getFullYear() === _now.getFullYear() &&
+                           d.getMonth() === _now.getMonth();
+                }).reduce(function(s, t) { return s + Number(t.amount || 0); }, 0);
+                // Overall project ROI: total revenue vs total capital
+                var _totalProjRev = S.invs.reduce(function(s, inv) { return s + calcProjectStats(inv).revenue; }, 0);
+                var _totalProjCap = S.invs.reduce(function(s, inv) { return s + calcProjectStats(inv).capital; }, 0);
+                var _roi = _totalProjCap > 0 ? (_totalProjRev / _totalProjCap * 100).toFixed(1) : "0.0";
+                var _roiColor = Number(_roi) >= 0 ? "var(--green)" : "var(--red)";
+                var _mProfitColor = mProfit >= 0 ? "var(--green)" : "var(--red)";
+                var _btnStyle = "background:var(--sur);border:1px solid var(--bor);border-radius:12px;padding:11px 6px;text-align:center;cursor:pointer;transition:border-color .2s,transform .15s";
+                var _hov = "onmouseover=\"this.style.borderColor='var(--grn)';this.style.transform='translateY(-2px)'\" onmouseout=\"this.style.borderColor='var(--bor)';this.style.transform=''\"";
+                h += "<div style='display:grid;grid-template-columns:repeat(4,1fr);gap:8px'>";
+                // 1. Add Payment
+                h += "<div onclick='goPage(\"finance\")' style='" + _btnStyle + "' " + _hov + ">";
+                h += "<div style='font-size:20px;margin-bottom:4px'>+</div>";
+                h += "<div style='font-size:9px;color:var(--mut);font-weight:700'>Add Payment</div></div>";
+                // 2. Projects
+                h += "<div onclick='goPage(\"investments\")' style='" + _btnStyle + "' " + _hov + ">";
+                h += "<div style='font-size:20px;margin-bottom:4px'>📁</div>";
+                h += "<div style='font-size:9px;color:var(--mut);font-weight:700'>Projects</div></div>";
+                // 3. PAID – quick payment status shortcut
+                h += "<div onclick='goPage(\"finance\")' style='" + _btnStyle + "' " + _hov + ">";
+                h += "<div style='font-size:13px;font-weight:900;color:var(--green);line-height:1.1'>" + pn + "/" + S.mems.length + "</div>";
+                h += "<div style='font-size:7px;color:var(--mut);font-weight:700;letter-spacing:1px;margin-top:3px'>PAID</div>";
+                h += "<div style='font-size:7px;color:" + (pn < S.mems.length ? "var(--pending)" : "var(--green)") + ";font-weight:700'>" + (S.mems.length - pn) + " pending</div></div>";
+                // 4. Audit
+                h += "<div onclick='goPage(\"activity\")' style='" + _btnStyle + "' " + _hov + ">";
+                h += "<div style='font-size:20px;margin-bottom:4px'>🔍</div>";
+                h += "<div style='font-size:9px;color:var(--mut);font-weight:700'>Audit</div></div>";
                 h += "</div>";
 
                 // ── Stats row ──
                 h += "<div class='g4'>";
-                h +=
-                    "<div class='stat-box'><div class='lbl2'>PAID</div><div class='val' style='color:var(--green)'>" +
-                    pn +
-                    "/" +
-                    S.mems.length +
-                    "</div><div style='font-size:9px;color:var(--mut);margin-top:2px'>" +
-                    (S.mems.length - pn) +
-                    " pending</div></div>";
+                // Slot 1: Profit · Month insight (swapped from quick actions)
+                h += "<div class='stat-box' onclick='S._fTab=\"summary\";goPage(\"finance\")' style='cursor:pointer;border-color:" + (mProfit > 0 ? "var(--green)44" : "") + "'>";
+                h += "<div class='lbl2'>PROFIT · MONTH</div>";
+                h += "<div class='val' style='color:" + _mProfitColor + "'>" + (mProfit >= 0 ? "+" : "") + fmt(mProfit) + "</div>";
+                h += "<div style='font-size:9px;color:" + _roiColor + ";margin-top:2px;font-weight:700'>" + _roi + "% ROI · " + S.invs.length + " proj</div></div>";
                 h +=
                     "<div class='stat-box'><div class='lbl2'>PROJECTS</div><div class='val' style='color:var(--grn)'>" +
                     S.invs.length +
@@ -3874,13 +3796,13 @@
                     ai.length +
                     " active</div></div>";
                 h +=
-                    "<div class='stat-box'><div class='lbl2'>BALANCE</div><div class='val' style='color:var(--teal)'>" +
-                    fmt(s.f) +
-                    "</div></div>";
+                    "<div class='stat-box'><div class='lbl2'>AVAILABLE CASH</div><div class='val' style='color:var(--teal)'>" +
+                    fmt(availableCash) +
+                    "</div><div style='font-size:9px;color:var(--mut);margin-top:2px'>after all expenses</div></div>";
                 h +=
                     "<div class='stat-box' onclick='goPage(this.dataset.gw)' data-gw='wallet' style='cursor:pointer'><div class='lbl2'>MY WALLET</div><div class='val' style='color:var(--purple)'>" +
-                    fmt(w.total) +
-                    "</div></div>";
+                    fmt(w.available) +
+                    "</div><div style='font-size:9px;color:var(--mut);margin-top:2px'>my deposits</div></div>";
                 h += "</div>";
 
                 // ── Monthly payments ──
@@ -3947,29 +3869,19 @@
                     h +=
                         "<div style='font-size:10px;letter-spacing:2px;color:var(--mut);font-weight:700;margin-bottom:11px'>ACTIVE PROJECTS</div>";
                     S.invs.slice(0, 3).forEach(function (inv) {
-                        var dep = Number(
-                            inv.capitalDeployed || inv.amount || 0,
-                        );
-                        var ret = Number(inv.actualReturn || 0);
-                        var pl = ret - dep;
+                        var _dcs = calcProjectStats(inv);
+                        var dep = _dcs.capital;
+                        var pl  = _dcs.pl;
                         var cols = inv.collections || [];
                         var sales = inv.sales || [];
-                        var expenses = inv.projectExpenses || [];
                         var stockTotal = cols.reduce(function (s, e) {
                             return s + Number(e.kg || 0);
                         }, 0);
                         var salesTotal = sales.reduce(function (s, e) {
                             return s + Number(e.soldKg || 0);
                         }, 0);
-                        var revenueTotal = (sales.length ? sales : cols).reduce(
-                            function (s, e) {
-                                return s + Number(e.revenue || 0);
-                            },
-                            0,
-                        );
-                        var expenseTotal = expenses.reduce(function (s, e) {
-                            return s + Number(e.amount || 0);
-                        }, 0);
+                        var revenueTotal = _dcs.revenue;
+                        var expenseTotal = _dcs.expense;
                         var IST = {
                             active: { L: "Active", C: "var(--grn)" },
                             planning: { L: "Planning", C: "var(--amber)" },
@@ -5010,6 +4922,28 @@
                 render();
             }
 
+            // ── Live project stats calculator (never reads stale DB fields) ──
+            function calcProjectStats(inv) {
+                var sales    = inv.sales || [];
+                var expenses = inv.projectExpenses || [];
+                var capEntries = inv.capitalEntries || [];
+                // Revenue = sum of all recorded sale revenues
+                var revenue = sales.reduce(function(s, e) { return s + Number(e.revenue || 0); }, 0);
+                // Expense = sum of all project expenses
+                var expense = expenses.reduce(function(s, e) { return s + Number(e.amount || 0); }, 0);
+                // Capital: prefer capitalDeployed, then capitalEntries sum, then legacy amount
+                var capital = Number(inv.capitalDeployed || 0);
+                if (!capital && capEntries.length) {
+                    capital = capEntries.reduce(function(s, e) { return s + Number(e.amount || 0); }, 0);
+                }
+                if (!capital) capital = Number(inv.amount || 0);
+                // Net balance = revenue minus expenses
+                var netBalance = revenue - expense;
+                // P&L = revenue minus capital deployed
+                var pl = revenue - capital;
+                return { revenue: revenue, expense: expense, capital: capital, netBalance: netBalance, pl: pl };
+            }
+
             function pInv() {
                 var IS2 = {
                     active: { L: "Active", C: "#4f8ef7", B: "#06102080" },
@@ -5019,10 +4953,10 @@
                     loss: { L: "Loss", C: "var(--orange)", B: "#1a0e0480" },
                 };
                 var dep = S.invs.reduce(function (s, x) {
-                    return s + Number(x.capitalDeployed || x.amount || 0);
+                    return s + calcProjectStats(x).capital;
                 }, 0);
                 var ret = S.invs.reduce(function (s, x) {
-                    return s + Number(x.actualReturn || 0);
+                    return s + calcProjectStats(x).revenue;
                 }, 0);
                 var h = "<div class='fc'>";
                 h +=
@@ -5099,11 +5033,10 @@
                     h +=
                         "<div style='display:flex;flex-direction:column;gap:10px'>";
                     filtered.forEach(function (inv) {
-                        var dep2 = Number(
-                                inv.capitalDeployed || inv.amount || 0,
-                            ),
-                            ret2 = Number(inv.actualReturn || 0),
-                            pl = ret2 - dep2;
+                        var _cs = calcProjectStats(inv),
+                            dep2 = _cs.capital,
+                            ret2 = _cs.revenue,
+                            pl   = _cs.pl;
                         var st = IS2[inv.status] || IS2.planning;
                         var team = inv.teamEntries || [];
                         h +=
@@ -5300,10 +5233,11 @@
                     }
                     return "<div class='card' style='text-align:center;padding:60px 24px;color:var(--mut)'>Project not found.<br><br><button onclick='backToProjects()' class='btn-a'>&#x2190; Back</button></div>";
                 }
-                var dep2 = Number(inv.capitalDeployed || inv.amount || 0);
-                var ret2 = Number(inv.actualReturn || 0);
-                var exp = Number(inv.expectedReturn || 0);
-                var pl = ret2 - dep2;
+                var _cs = calcProjectStats(inv);
+                var dep2 = _cs.capital;
+                var ret2 = _cs.revenue;
+                var exp  = Number(inv.expectedReturn || 0);
+                var pl   = _cs.pl;
                 var cols2 = inv.collections || [];
                 var sales2 = inv.sales || [];
                 var team = inv.teamEntries || [];
@@ -5315,12 +5249,9 @@
                 var summarySold = sales2.reduce(function (s, e) {
                     return s + Number(e.soldKg || 0);
                 }, 0);
-                var summaryRevenue = (sales2.length ? sales2 : cols2).reduce(
-                    function (s, e) {
-                        return s + Number(e.revenue || 0);
-                    },
-                    0,
-                );
+                var summaryRevenue = sales2.reduce(function (s, e) {
+                    return s + Number(e.revenue || 0);
+                }, 0);
                 var summaryExpense = (inv.projectExpenses || []).reduce(
                     function (s, e) {
                         return s + Number(e.amount || 0);
@@ -5344,12 +5275,9 @@
                 var totalSold = Object.keys(stockMap).reduce(function (s, k) {
                     return s + stockMap[k].sold;
                 }, 0);
-                var totalRev = (sales2.length ? sales2 : cols2).reduce(
-                    function (s, e) {
-                        return s + Number(e.revenue || 0);
-                    },
-                    0,
-                );
+                var totalRev = sales2.reduce(function (s, e) {
+                    return s + Number(e.revenue || 0);
+                }, 0);
                 var expenses = inv.projectExpenses || [];
                 var totalExpense = expenses.reduce(function (s, e) {
                     return s + Number(e.amount || 0);
