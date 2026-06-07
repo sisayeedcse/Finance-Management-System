@@ -2259,22 +2259,7 @@
                 var el = document.getElementById("dash-balance");
                 if (!el) return;
                 var target = Number(el.dataset.val) || 0;
-                if (target === 0) {
-                    el.textContent = fmt(0);
-                    return;
-                }
-                var dur = 900,
-                    start = null;
-                function ease(t) {
-                    return 1 - Math.pow(1 - t, 3);
-                }
-                function step(ts) {
-                    if (!start) start = ts;
-                    var p = Math.min((ts - start) / dur, 1);
-                    el.textContent = fmt(Math.round(ease(p) * target));
-                    if (p < 1) requestAnimationFrame(step);
-                }
-                requestAnimationFrame(step);
+                el.textContent = fmt(target);
             }
 
             function fd(d) {
@@ -3799,7 +3784,7 @@
                     "<div style='font-size:9px;letter-spacing:3px;color:var(--mut);font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:6px'>";
                 h +=
                     "<div style='width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green)'></div>";
-                h += "SIPR GROUP · FUND BALANCE</div>";
+                h += "SIPR GROUP · NET WORTH</div>";
                 h +=
                     "<div id='dash-balance' data-val='" +
                     s.f +
