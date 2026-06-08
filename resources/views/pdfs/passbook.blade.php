@@ -123,7 +123,7 @@
     <div class="header">
         <p><strong>Member:</strong> {{ $member->name }}</p>
         <p><strong>Member ID:</strong> {{ $member->id }}</p>
-        <p><strong>Balance:</strong> BDT {{ number_format($wallet['balance'], 0) }}</p>
+        <p><strong>Balance:</strong> ৳ {{ number_format($wallet['balance'], 0) }}</p>
     </div>
 
     <table>
@@ -140,7 +140,7 @@
                 <tr>
                     <td>{{ $tx['date'] }}</td>
                     <td>{{ ucfirst($tx['type']) }}</td>
-                    <td>BDT {{ number_format($tx['amount'], 0) }}</td>
+                    <td>৳ {{ number_format($tx['amount'], 0) }}</td>
                     <td>{{ $tx['note'] ?? '–' }}</td>
                 </tr>
             @empty
@@ -152,9 +152,9 @@
     </table>
 
     <div class="summary">
-        <p><strong>Total Deposited:</strong> BDT {{ number_format($wallet['deposited'], 0) }}</p>
-        <p><strong>Total Fines:</strong> BDT {{ number_format($wallet['fines'], 0) }}</p>
-        <p><strong>Current Balance:</strong> BDT {{ number_format($wallet['balance'], 0) }}</p>
+        <p><strong>Total Deposited:</strong> ৳ {{ number_format($wallet['deposited'], 0) }}</p>
+        <p><strong>Total Fines:</strong> ৳ {{ number_format($wallet['fines'], 0) }}</p>
+        <p><strong>Current Balance:</strong> ৳ {{ number_format($wallet['balance'], 0) }}</p>
     </div>
 </body>
 

@@ -450,6 +450,12 @@
                 .hide-mob {
                     display: none !important;
                 }
+                #content {
+                    margin-top: 14px;
+                }
+                #content h2 {
+                    display: none !important;
+                }
             }
             #overlay {
                 display: none;
@@ -2247,19 +2253,20 @@
                     (navigator.userAgentData && navigator.userAgentData.mobile)
                 );
             }
-            function fmt(n) {
+            function fmt(n, forceBDT = false) {
                 var v = Number(n || 0),
                     neg = v < 0,
                     abs = Math.round(Math.abs(v))
                         .toString()
                         .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-                return (neg ? "-" : "") + "BDT " + abs;
+                var currency = forceBDT ? "BDT " : "৳ ";
+                return (neg ? "-" : "") + currency + abs;
             }
             function countUpBalance() {
                 var el = document.getElementById("dash-balance");
                 if (!el) return;
                 var target = Number(el.dataset.val) || 0;
-                el.textContent = fmt(target);
+                el.textContent = fmt(target, true);
             }
 
             function fd(d) {
@@ -3472,25 +3479,9 @@
                     // ── Ham button context ──
                     var hb = $("ham");
                     if (hb) {
-                        var mainTabs = ["dashboard", "investments", "members"];
-                        var onMainPage =
-                            mainTabs.indexOf(S.tab) >= 0 && !S.activeProj;
-                        if (!onMainPage || S.activeProj) {
-                            hb.innerHTML = "&#x2190;";
-                            hb.style.cssText =
-                                "padding:7px 14px;border-radius:20px;border:1px solid var(--bor);background:var(--s2);cursor:pointer;font-size:13px;font-weight:700;color:var(--txt);font-family:inherit;";
-                            hb.onclick = function () {
-                                if (S.activeProj) {
-                                    backToProjects();
-                                } else {
-                                    goPage("dashboard");
-                                }
-                            };
-                        } else {
-                            hb.innerHTML = "&#x2630;";
-                            hb.style.cssText = "";
-                            hb.onclick = toggleSidebar;
-                        }
+                        hb.innerHTML = "&#x2630;";
+                        hb.style.cssText = "";
+                        hb.onclick = toggleSidebar;
                     }
                     buildNav();
                 } catch (err) {
@@ -3701,13 +3692,13 @@
                     "<div id='dash-balance' data-val='" +
                     netWorth +
                     "' style='font-size:32px;font-weight:900;letter-spacing:-1px;margin-bottom:4px'>" +
-                    fmt(netWorth) +
+                    fmt(netWorth, true) +
                     "</div>";
                 h +=
                     "<div style='display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap'>";
                 h +=
                     "<span style='padding:2px 8px;border-radius:99px;background:var(--green)18;color:var(--green);font-size:10px;font-weight:700'>Goal: " +
-                    fmt(GOAL) +
+                    fmt(GOAL, true) +
                     "</span>";
                 h +=
                     "<span style='font-size:11px;color:var(--mut)'>" +
@@ -4647,7 +4638,7 @@
                 var msg =
                     "Assalamu Alaikum " +
                     name +
-                    ",\n\nYour SIPR contribution of BDT 500 for " +
+                    ",\n\nYour SIPR contribution of ৳ 500 for " +
                     MF[S.payM] +
                     " " +
                     S.payY +
@@ -4665,7 +4656,7 @@
                     return m.phone && validPhone(m.phone);
                 });
                 var defMsg =
-                    "Assalamu Alaikum {name},\n\nYour SIPR monthly contribution of BDT 500 for " +
+                    "Assalamu Alaikum {name},\n\nYour SIPR monthly contribution of ৳ 500 for " +
                     MF[S.payM] +
                     " " +
                     S.payY +
@@ -4834,7 +4825,7 @@
                             "</span></td><td style='padding:9px 13px;text-align:right;font-weight:700;color:" +
                             (m.paid ? "#15803d" : "#dc2626") +
                             "'>" +
-                            (m.paid ? fmt(m.paidAmt) : "BDT " + DUE + " due") +
+                            (m.paid ? fmt(m.paidAmt) : "৳ " + DUE + " due") +
                             "</td></tr>"
                         );
                     })
@@ -4854,7 +4845,7 @@
                 w.document.close();
             }
             function expCSV() {
-                var rows = [["Date", "Type", "Member", "Amount (BDT)", "Note"]];
+                var rows = [["Date", "Type", "Member", "Amount (৳)", "Note"]];
                 S.txs
                     .slice()
                     .reverse()
@@ -5366,22 +5357,22 @@
                     h += "<div class='g4' style='margin-bottom:12px'>";
                     h +=
                         "<div class='stat-box'><div class='lbl2'>CAPITAL</div><div class='val' style='color:var(--gold)'>" +
-                        fmt(dep2) +
+                        fmt(dep2, true) +
                         "</div></div>";
                     h +=
                         "<div class='stat-box'><div class='lbl2'>RETURNED</div><div class='val' style='color:var(--green)'>" +
-                        fmt(ret2) +
+                        fmt(ret2, true) +
                         "</div></div>";
                     h +=
                         "<div class='stat-box'><div class='lbl2'>P&L</div><div class='val' style='color:" +
                         (pl >= 0 ? "var(--green)" : "var(--red)") +
                         "'>" +
                         (pl >= 0 ? "+" : "") +
-                        fmt(pl) +
+                        fmt(pl, true) +
                         "</div></div>";
                     h +=
                         "<div class='stat-box'><div class='lbl2'>EXPENSES</div><div class='val' style='color:var(--orange)'>" +
-                        fmt(totalExpense) +
+                        fmt(totalExpense, true) +
                         "</div></div>";
                     h += "</div>";
                     if (Object.keys(stockMap).length) {
@@ -6106,7 +6097,7 @@
                 h +=
                     "<div><label class='lbl'>" +
                     (type === 0 ? "Buy" : "Sell") +
-                    " Price/unit (BDT)</label><input id='ct-pp' type='number' class='inp' value='" +
+                    " Price/unit (৳)</label><input id='ct-pp' type='number' class='inp' value='" +
                     (item ? item.price || "" : "") +
                     "'/></div>";
                 h +=
@@ -6196,7 +6187,7 @@
                 h +=
                     "<div><label class='lbl'>Organization</label><input id='ei-og' type='text' class='inp'/></div>";
                 h +=
-                    "<div><label class='lbl'>Amount (BDT) *</label><input id='ei-am' type='number' class='inp'/></div>";
+                    "<div><label class='lbl'>Amount (৳) *</label><input id='ei-am' type='number' class='inp'/></div>";
                 h +=
                     "<div><label class='lbl'>Date</label><input id='ei-dt' type='date' class='inp' value='" +
                     new Date().toISOString().split("T")[0] +
@@ -6411,7 +6402,7 @@
                     (current ? current.desc || "" : "") +
                     "'/></div>";
                 h +=
-                    "<div><label class='lbl'>Amount (BDT) *</label><input id='pe-amt' type='number' class='inp' placeholder='0' min='0' value='" +
+                    "<div><label class='lbl'>Amount (৳) *</label><input id='pe-amt' type='number' class='inp' placeholder='0' min='0' value='" +
                     (current ? current.amount || "" : "") +
                     "'/></div>";
                 h +=
@@ -6544,7 +6535,7 @@
                         (current ? current.soldKg || "" : "") +
                         "'/></div>";
                     hEdit +=
-                        "<div><label class='lbl'>Price / unit (BDT) *</label><input id='sl-pp' type='number' step='0.01' min='0' class='inp' value='" +
+                        "<div><label class='lbl'>Price / unit (৳) *</label><input id='sl-pp' type='number' step='0.01' min='0' class='inp' value='" +
                         (current ? current.pricePerKg || "" : "") +
                         "'/></div>";
                     hEdit +=
@@ -6663,9 +6654,9 @@
                     firstUnit +
                     "</div></div>";
                 h +=
-                    "<div class='g2'><div><label class='lbl'>Price / unit (BDT) *</label><input id='sl-pp' type='number' class='inp' step='0.01' min='0' placeholder='0' oninput='updateSaleRevenue()'/></div>";
+                    "<div class='g2'><div><label class='lbl'>Price / unit (৳) *</label><input id='sl-pp' type='number' class='inp' step='0.01' min='0' placeholder='0' oninput='updateSaleRevenue()'/></div>";
                 h +=
-                    "<div><label class='lbl'>Revenue (auto)</label><div id='sl-rev-box' style='padding:11px 13px;background:var(--green)10;border:1px solid var(--green)30;border-radius:11px;font-size:14px;font-weight:900;color:var(--green)'>BDT 0</div></div></div>";
+                    "<div><label class='lbl'>Revenue (auto)</label><div id='sl-rev-box' style='padding:11px 13px;background:var(--green)10;border:1px solid var(--green)30;border-radius:11px;font-size:14px;font-weight:900;color:var(--green)'>৳ 0</div></div></div>";
                 h +=
                     "<div><label class='lbl'>Buyer / Note</label><input id='sl-note' type='text' class='inp' placeholder='Buyer name, location...'/></div>";
                 h +=
@@ -6778,7 +6769,7 @@
                     (editing ? "Edit" : "+ Add") +
                     " Capital</div><button onclick='closeModal()' style='background:none;border:none;color:var(--mut);font-size:20px;cursor:pointer'>&#x2715;</button></div>";
                 h +=
-                    "<div class='fc'><div><label class='lbl'>Amount (BDT) *</label><input id='cap-am' type='number' class='inp' placeholder='0' value='" +
+                    "<div class='fc'><div><label class='lbl'>Amount (৳) *</label><input id='cap-am' type='number' class='inp' placeholder='0' value='" +
                     (current ? current.amount || "" : "") +
                     "'/></div>";
                 h +=
@@ -6893,11 +6884,11 @@
                 h +=
                     "<div class='g2'><div><label class='lbl'>Start Date *</label><input id='in-dt' type='date' class='inp' value='" +
                     (inv ? inv.date : new Date().toISOString().split("T")[0]) +
-                    "'/></div><div><label class='lbl'>Expected Return (BDT)</label><input id='in-er' type='number' class='inp' value='" +
+                    "'/></div><div><label class='lbl'>Expected Return (৳)</label><input id='in-er' type='number' class='inp' value='" +
                     (inv ? inv.expectedReturn || "" : "") +
                     "'/></div></div>";
                 h +=
-                    "<div class='g2'><div><label class='lbl'>Initial Capital (BDT)</label><input id='in-am' type='number' class='inp' value='" +
+                    "<div class='g2'><div><label class='lbl'>Initial Capital (৳)</label><input id='in-am' type='number' class='inp' value='" +
                     (inv ? inv.capitalDeployed || inv.amount || "" : "") +
                     "'/></div><div><label class='lbl'>Capital Source</label><input id='in-cs' type='text' class='inp' value='" +
                     (inv ? inv.capitalSource || "SIPR Fund" : "SIPR Fund") +
@@ -7288,7 +7279,7 @@
                 // Amount + Date
                 h += "<div class='g2'>";
                 h +=
-                    "<div><label class='lbl'>Amount (BDT)</label><input id='tx-am' type='number' class='inp' value='" +
+                    "<div><label class='lbl'>Amount (৳)</label><input id='tx-am' type='number' class='inp' value='" +
                     (t ? t.amount : "") +
                     "'/></div>";
                 var txDateStr = t && t.date ? String(t.date).substring(0, 10) : today;
@@ -8092,7 +8083,7 @@
                 $("modal").innerHTML =
                     "<div class='modal-bg' onclick='if(event.target===this)closeModal()'><div class='modal-box'><div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:18px'><div style='font-weight:800;font-size:17px'>Issue Fine</div><button onclick='closeModal()' style='background:none;border:none;color:var(--mut);font-size:20px;cursor:pointer'>✕</button></div><div style='background:#1a0e0488;border:1px solid #78140044;border-radius:10px;padding:10px 13px;margin-bottom:13px'><div style='font-size:12px;color:var(--mut)'>Issuing fine to</div><div style='font-size:16px;font-weight:800;color:var(--orange)'>" +
                     mname +
-                    "</div></div><div class='fc'><div><label class='lbl'>Amount (BDT)</label><input id='fn-a' type='number' class='inp'/></div><div><label class='lbl'>Reason</label><input id='fn-r' type='text' class='inp' placeholder='e.g. Late payment penalty'/></div><div><label class='lbl'>Date</label><input id='fn-d' type='date' class='inp' value='" +
+                    "</div></div><div class='fc'><div><label class='lbl'>Amount (৳)</label><input id='fn-a' type='number' class='inp'/></div><div><label class='lbl'>Reason</label><input id='fn-r' type='text' class='inp' placeholder='e.g. Late payment penalty'/></div><div><label class='lbl'>Date</label><input id='fn-d' type='date' class='inp' value='" +
                     new Date().toISOString().split("T")[0] +
                     "'/></div><button class='btn-p' style='background:linear-gradient(135deg,#7f1d1d,#ef4444)' onclick='saveFine(\"" +
                     mid +
@@ -8556,15 +8547,18 @@
                     (canWrite()
                         ? "<button class='btn-a' onclick='openTx(null,\"expense\")'>+ Log Expense</button>"
                         : "") +
-                    "</div><div class='g3'><div class='sc' style='background:#1a0e0488;text-align:center'><div class='lbl2' style='margin-bottom:5px'>TOTAL</div><div style='color:var(--red);font-weight:900;font-size:17px'>" +
+                    "</div><div class='hero'><div style='display:grid;grid-template-columns:repeat(3,1fr);gap:0;text-align:center'>" +
+                    "<div><div style='font-size:9px;color:var(--mut);font-weight:700;letter-spacing:2px;margin-bottom:5px'>TOTAL</div><div style='font-size:18px;font-weight:900;color:var(--red)'>" +
                     fmt(total) +
-                    "</div></div><div class='sc' style='text-align:center'><div class='lbl2' style='margin-bottom:5px'>RECORDS</div><div style='font-weight:900;font-size:17px'>" +
+                    "</div></div>" +
+                    "<div style='border-left:1px solid var(--bor);border-right:1px solid var(--bor)'><div style='font-size:9px;color:var(--mut);font-weight:700;letter-spacing:2px;margin-bottom:5px'>RECORDS</div><div style='font-size:18px;font-weight:900;color:var(--txt)'>" +
                     exps.length +
-                    "</div></div><div class='sc' style='text-align:center'><div class='lbl2' style='margin-bottom:5px'>AVG</div><div style='color:var(--gold);font-weight:900;font-size:17px'>" +
+                    "</div></div>" +
+                    "<div><div style='font-size:9px;color:var(--mut);font-weight:700;letter-spacing:2px;margin-bottom:5px'>AVG</div><div style='font-size:18px;font-weight:900;color:var(--gold)'>" +
                     (exps.length
                         ? fmt(Math.round(total / exps.length))
                         : fmt(0)) +
-                    "</div></div></div>";
+                    "</div></div></div></div>";
                 if (!exps.length)
                     h +=
                         "<div class='card' style='text-align:center;padding:48px;color:var(--mut)'><div style='font-size:40px;opacity:.3;margin-bottom:12px'>💸</div>No expenses yet.</div>";
