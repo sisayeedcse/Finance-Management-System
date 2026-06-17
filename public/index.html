@@ -5351,22 +5351,22 @@
                     h += "<div class='g4' style='margin-bottom:12px'>";
                     h +=
                         "<div class='stat-box'><div class='lbl2'>CAPITAL</div><div class='val' style='color:var(--gold)'>" +
-                        fmt(dep2, true) +
+                        fmt(dep2) +
                         "</div></div>";
                     h +=
                         "<div class='stat-box'><div class='lbl2'>RETURNED</div><div class='val' style='color:var(--green)'>" +
-                        fmt(ret2, true) +
+                        fmt(ret2) +
                         "</div></div>";
                     h +=
                         "<div class='stat-box'><div class='lbl2'>P&L</div><div class='val' style='color:" +
                         (pl >= 0 ? "var(--green)" : "var(--red)") +
                         "'>" +
                         (pl >= 0 ? "+" : "") +
-                        fmt(pl, true) +
+                        fmt(pl) +
                         "</div></div>";
                     h +=
                         "<div class='stat-box'><div class='lbl2'>EXPENSES</div><div class='val' style='color:var(--orange)'>" +
-                        fmt(totalExpense, true) +
+                        fmt(totalExpense) +
                         "</div></div>";
                     h += "</div>";
                     if (Object.keys(stockMap).length) {
