@@ -741,7 +741,7 @@
                 display: none;
             }
             .proj-tab {
-                padding: 11px 16px;
+                padding: 9px 13px;
                 border: none;
                 background: none;
                 font-family: inherit;
@@ -5301,23 +5301,17 @@
                         "</button>";
                 });
                 h += "</div>";
-                h += "<div style='padding:18px 20px'>";
+                h += "<div style='padding:14px 16px'>";
 
-                h +=
-                    "<div style='display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px'>";
-                h +=
-                    "<div style='display:flex;align-items:center;gap:10px;flex-wrap:wrap'>";
-                h +=
-                    "<button onclick='backToProjects()' style='display:flex;align-items:center;gap:5px;background:var(--s2);border:1px solid var(--bor);color:var(--mut);padding:6px 12px;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s' onmouseover=\"this.style.color='var(--txt)';this.style.borderColor='var(--grn)'\" onmouseout=\"this.style.color='var(--mut)';this.style.borderColor='var(--bor)'\">&#x2190; All Projects</button>";
-                h +=
-                    "<div><div style='font-size:10px;letter-spacing:2px;color:var(--mut);font-weight:700;margin-bottom:2px'>PROJECT DETAILS</div><div style='font-size:18px;font-weight:900'>" +
-                    inv.name +
-                    "</div></div></div>";
+                // ── Compact action bar ──
+                h += "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:8px'>";
+                h += "<button onclick='backToProjects()' style='display:flex;align-items:center;gap:4px;background:var(--s2);border:1px solid var(--bor);color:var(--mut);padding:5px 10px;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;touch-action:manipulation'>&#x2190; Back</button>";
+                h += "<div style='font-size:15px;font-weight:900;flex:1;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 4px'>" + inv.name + "</div>";
                 if (canMgr || isAdmin())
                     h +=
                         "<button class='btn-a' onclick='openInv(this.dataset.id)' data-id='" +
                         inv.id +
-                        "'>&#x270E; Edit Project</button>";
+                        "' style='padding:5px 10px;font-size:12px;flex-shrink:0'>&#x270E; Edit</button>";
                 h += "</div>";
 
                 // ── OVERVIEW ──
