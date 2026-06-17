@@ -5277,12 +5277,6 @@
                 // ── TAB CARD ──
                 var TABS = [
                     { k: "overview", l: "Overview" },
-                    {
-                        k: "log",
-                        l:
-                            "Daily Log" +
-                            (cols2.length ? " (" + cols2.length + ")" : ""),
-                    },
                     { k: "sale", l: "Sale" },
                     { k: "stock", l: "Stock" },
                     { k: "budget", l: "Budget" },
@@ -5435,80 +5429,6 @@
                             "<div style='font-size:13px;color:var(--mut);padding:12px 14px;background:var(--s2);border-radius:11px;line-height:1.6;border:1px solid var(--bor)'>" +
                             inv.notes +
                             "</div>";
-
-                    // ── DAILY LOG ──
-                } else if (tab2 === "log") {
-                    h +=
-                        "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px'>";
-                    h +=
-                        "<div><div style='font-size:15px;font-weight:800'>Daily Log</div><div style='font-size:11px;color:var(--mut);margin-top:2px'>" +
-                        cols2.length +
-                        " collection entr" +
-                        (cols2.length === 1 ? "y" : "ies") +
-                        "</div></div>";
-                    if (canMgr)
-                        h +=
-                            "<button class='btn-a' onclick='openCollection(this.dataset.id)' data-id='" +
-                            inv.id +
-                            "'>&#x1F4E6; + Collect</button>";
-                    h += "</div>";
-                    if (!cols2.length) {
-                        h +=
-                            "<div style='text-align:center;padding:40px 20px;border:1px dashed var(--bor);border-radius:13px;color:var(--mut)'><div style='font-size:32px;margin-bottom:8px;opacity:.3'>&#x1F4CB;</div><div style='font-size:14px;font-weight:700'>No entries yet</div><div style='font-size:12px;margin-top:4px'>Tap + Collect to log daily collections.</div></div>";
-                    } else {
-                        h +=
-                            "<div style='display:flex;flex-direction:column;gap:8px'>";
-                        cols2
-                            .slice()
-                            .reverse()
-                            .forEach(function (e2, ci) {
-                                var actualIdx = cols2.length - 1 - ci;
-                                var item =
-                                    (
-                                        e2.plasticType ||
-                                        e2.item ||
-                                        "Item"
-                                    ).trim() || "Item";
-                                h +=
-                                    "<div style='background:var(--s2);border:1px solid var(--bor);border-radius:12px;padding:11px 14px;display:flex;align-items:center;gap:10px'>";
-                                h += "<div style='flex:1;min-width:0'>";
-                                h +=
-                                    "<div style='font-size:13px;font-weight:700'>" +
-                                    item +
-                                    "</div>";
-                                h +=
-                                    "<div style='font-size:11px;color:var(--mut);margin-top:2px'>" +
-                                    fd(e2.date) +
-                                    (e2.source ? " · " + e2.source : "") +
-                                    "</div>";
-                                h += "</div>";
-                                if (isAdmin() || canMgr)
-                                    h +=
-                                        "<button onclick='openCollection(this.dataset.id,this.dataset.ci)' data-id='" +
-                                        inv.id +
-                                        "' data-ci='" +
-                                        actualIdx +
-                                        "' class='btn-a' style='padding:4px 8px;font-size:10px;flex-shrink:0;margin-right:4px'>Edit</button>";
-                                h +=
-                                    "<div style='text-align:right;flex-shrink:0'>";
-                                h +=
-                                    "<div style='font-size:14px;font-weight:900;color:var(--teal)'>" +
-                                    Number(e2.kg || 0).toFixed(2) +
-                                    " " +
-                                    (e2.unit || "pcs") +
-                                    "</div>";
-                                h += "</div>";
-                                if (isAdmin())
-                                    h +=
-                                        "<button onclick='delCollection(this.dataset.id,this.dataset.ci)' data-id='" +
-                                        inv.id +
-                                        "' data-ci='" +
-                                        actualIdx +
-                                        "' class='btn-d' style='padding:4px 8px;font-size:10px;flex-shrink:0'>&#xD7;</button>";
-                                h += "</div>";
-                            });
-                        h += "</div>";
-                    }
 
                     // ── SALE TAB ──
                 } else if (tab2 === "sale") {
@@ -6245,136 +6165,6 @@
                 })();
                 });
             }
-            // Collection
-            function openCollection(invId, idx) {
-                var inv = getProjectById(invId);
-                if (!inv) return;
-                var editing = idx != null && idx !== "";
-                var current = editing
-                    ? (inv.collections || [])[Number(idx)]
-                    : null;
-                var h =
-                    "<div class='modal-bg' onclick='if(event.target===this)closeModal()'><div class='modal-box'>";
-                h +=
-                    "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:14px'><div style='font-weight:800;font-size:17px'>&#x1F4E6; " +
-                    (editing ? "Edit" : "Add") +
-                    " Collection</div><button onclick='closeModal()' style='background:none;border:none;color:var(--mut);font-size:22px;cursor:pointer;line-height:1'>&#xD7;</button></div>";
-                h +=
-                    "<div style='background:var(--gdm);border:1px solid var(--gbr);border-radius:10px;padding:9px 13px;margin-bottom:14px'><div style='font-size:11px;color:var(--mut)'>Project</div><div style='font-size:14px;font-weight:800'>" +
-                    inv.name +
-                    "</div></div>";
-                h += "<div class='fc'>";
-                h +=
-                    "<div><label class='lbl'>Date *</label><input id='cl-dt' type='date' class='inp' value='" +
-                    (current
-                        ? current.date
-                        : new Date().toISOString().split("T")[0]) +
-                    "'/></div>";
-                h +=
-                    "<div><label class='lbl'>Source / Location</label><input id='cl-src' type='text' class='inp' placeholder='Market, supplier, location...' value='" +
-                    (current ? current.source || "" : "") +
-                    "'/></div>";
-                h +=
-                    "<div class='g2'><div><label class='lbl'>Quantity *</label><input id='cl-kg' type='number' class='inp' step='0.01' placeholder='0' min='0'/></div><div><label class='lbl'>Unit</label><input id='cl-unit' type='text' class='inp' value='" +
-                    (current
-                        ? current.unit || inv.defaultUnit || "pcs"
-                        : inv.defaultUnit || "pcs") +
-                    "'/></div></div>";
-                h +=
-                    "<div><label class='lbl'>Item Type</label><input id='cl-tp' type='text' class='inp' placeholder='LED Bulb, PET Bottle...' value='" +
-                    (current ? current.plasticType || current.item || "" : "") +
-                    "'/></div>";
-                h +=
-                    "<div><label class='lbl'>Notes</label><input id='cl-nt' type='text' class='inp' placeholder='Any additional info...' value='" +
-                    (current ? current.note || "" : "") +
-                    "'/></div>";
-                h +=
-                    "<button id='cl-save-btn' class='btn-p' onclick='saveCollection(this.dataset.id,this.dataset.ci)' data-id='" +
-                    invId +
-                    "' data-ci='" +
-                    (idx != null ? idx : "") +
-                    "'>" +
-                    (editing ? "Save Changes" : "Save Collection") +
-                    "</button>";
-                h += "</div></div></div>";
-                $("modal").innerHTML = h;
-                if (current) $("cl-kg").value = current.kg || "";
-            }
-
-            function saveCollection(invId, idx) {
-                // Prevent double-tap
-                var btn = $("cl-save-btn");
-                if (btn) {
-                    btn.disabled = true;
-                    btn.textContent = "Saving...";
-                }
-                var dt = ($("cl-dt") || { value: "" }).value,
-                    qty = ($("cl-kg") || { value: "" }).value;
-                if (!dt || !qty || Number(qty) <= 0) {
-                    toast("Date and quantity required", false);
-                    if (btn) {
-                        btn.disabled = false;
-                        btn.textContent = "Save Collection";
-                    }
-                    return;
-                }
-                var unit =
-                    ($("cl-unit") || { value: "pcs" }).value.trim() || "pcs";
-                var entry = {
-                    date: dt,
-                    source: ($("cl-src") || { value: "" }).value.trim(),
-                    kg: Number(qty),
-                    unit: unit,
-                    plasticType: ($("cl-tp") || { value: "" }).value.trim(),
-                    soldKg: 0,
-                    pricePerKg: 0,
-                    revenue: 0,
-                    note: ($("cl-nt") || { value: "" }).value.trim(),
-                    addedBy: S.name,
-                    addedAt: now(),
-                };
-                var inv = getProjectById(invId);
-                if (!inv) {
-                    if (btn) {
-                        btn.disabled = false;
-                        btn.textContent = "Save Collection";
-                    }
-                    return;
-                }
-                var cols2 = (inv.collections || []).slice();
-                if (idx != null && idx !== "") cols2[Number(idx)] = entry;
-                else cols2.push(entry);
-                (async () => {
-                    try {
-                        var rec = recalcProjectLedger(cols2, inv.sales || []);
-                        await API.updateProject(invId, {
-                            collections: rec.collections,
-                            sales: rec.sales,
-                            actualReturn: rec.actualReturn,
-                        });
-                        closeModal();
-                        logAct(
-                            idx != null && idx !== ""
-                                ? "edit_collection"
-                                : "add_collection",
-                            Number(qty) + " " + unit + " — " + inv.name,
-                        );
-                        toast(
-                            idx != null && idx !== ""
-                                ? "&#x2713; Collection updated!"
-                                : "&#x2713; Collection saved!",
-                        );
-                    } catch (e) {
-                        toast(e.message || "Error saving collection", false);
-                    } finally {
-                        if (btn) {
-                            btn.disabled = false;
-                            btn.textContent = "Save Collection";
-                        }
-                    }
-                })();
-            }
-
             // ── Sale functions ────────────────────────────────────────────
             // ── Budget / Expense functions ─────────────────────────────────
             function openProjectExpense(invId, idx) {
@@ -7020,30 +6810,6 @@
                 var pp = Number(($("cl-pp") || { value: 0 }).value) || 0;
                 var rv = $("cl-rv");
                 if (rv) rv.value = sk && pp ? Math.round(sk * pp) : "";
-            }
-            function delCollection(invId, idx) {
-                confirmDialog({ icon: '🗑', title: 'Delete Entry?', message: 'This collection entry will be permanently removed.', confirmText: 'Delete', confirmColor: '#ef4444' }).then(function(ok) { if (!ok) return;
-                var inv = getProjectById(invId);
-                if (!inv) return;
-                var cols2 = (inv.collections || []).slice();
-                var rev = Number(cols2[idx].revenue || 0);
-                cols2.splice(idx, 1);
-                var newReturn = Math.max(
-                    0,
-                    Number(inv.actualReturn || 0) - rev,
-                );
-                (async () => {
-                    try {
-                        await API.updateProject(invId, {
-                            collections: cols2,
-                            actualReturn: newReturn,
-                        });
-                        toast("Entry deleted.");
-                    } catch (e) {
-                        toast(e.message || "Error deleting collection", false);
-                    }
-                })();
-                });
             }
             function openMilestone(invId) {
                 $("modal").innerHTML =
