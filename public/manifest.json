@@ -1,20 +1,44 @@
 {
-  "name": "SIPR Group",
+  "name": "SIPR Finance Management",
   "short_name": "SIPR",
+  "description": "SIPR Group Finance Management System — manage members, transactions, projects, and more.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait-primary",
   "background_color": "#09091f",
   "theme_color": "#09091f",
+  "lang": "en",
+  "categories": ["finance", "productivity", "business"],
   "icons": [
     {
       "src": "/icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "/icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "Go to the SIPR dashboard",
+      "url": "/#dashboard",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Transactions",
+      "short_name": "Transactions",
+      "description": "View all transactions",
+      "url": "/#transactions",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     }
   ]
 }

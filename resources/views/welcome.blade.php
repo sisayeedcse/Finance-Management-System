@@ -4,11 +4,42 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        <title>Laravel</title>
+        <title>SIPR — Finance Management</title>
+
+        <!-- PWA Manifest -->
+        <link rel="manifest" href="/manifest.json">
+
+        <!-- PWA Meta Tags -->
+        <meta name="theme-color" content="#09091f">
+        <meta name="mobile-web-app-capable" content="yes">
+
+        <!-- Apple / iOS PWA Support -->
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="apple-mobile-web-app-title" content="SIPR">
+        <link rel="apple-touch-icon" href="/icon-512.png">
+
+        <!-- Favicon -->
+        <link rel="shortcut icon" href="/favicon-v2.ico" type="image/x-icon">
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=figtree:400,600&display=swap" rel="stylesheet" />
+
+        <!-- Service Worker Registration -->
+        <script>
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function () {
+                    navigator.serviceWorker.register('/sw.js')
+                        .then(function (reg) {
+                            console.log('[SIPR PWA] Service Worker registered:', reg.scope);
+                        })
+                        .catch(function (err) {
+                            console.warn('[SIPR PWA] Service Worker registration failed:', err);
+                        });
+                });
+            }
+        </script>
 
         <!-- Styles -->
         <style>
